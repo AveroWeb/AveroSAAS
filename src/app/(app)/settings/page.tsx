@@ -1,0 +1,75 @@
+import type { Metadata } from "next";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { StatusBadge, roleMeta } from "@/components/status-badge";
+import { requireStaff } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
+import { formatDate } from "@/lib/format";
+
+export const metadata: Metadata = { title: "Paramètres — Mon Agence" };
+
+export default async function SettingsPage() {
+  const user = await requireStaff();
+  const [organization, teamMembers] = await Promise.all([
+    prisma.organization.findUnique({ where: { id: user.organizationId } }),
+    prisma.user.findMany({
+      where: { organizationId: user.organizationId, role: { in: ["ADMIN", "MEMBER"] } },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  return (
+    <div className="flex max-w-2xl flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Paramètres</h1>
+        <p className="text-sm text-muted-foreground">Informations sur votre compte et votre agence.</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Agence</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <Row label="Nom" value={organization?.name ?? "—"} />
+          <Row label="Créée le" value={formatDate(organization?.createdAt)} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Mon compte</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <Row label="Nom" value={user.name ?? "—"} />
+          <Row label="Email" value={user.email ?? "—"} />
+          <Row label="Rôle" value={<StatusBadge meta={roleMeta[user.role]} />} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Membres de l&apos;équipe</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          {teamMembers.map((member) => (
+            <div key={member.id} className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">{member.name}</p>
+                <p className="text-xs text-muted-foreground">{member.email}</p>
+              </div>
+              <StatusBadge meta={roleMeta[member.role]} />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
+    </div>
+  );
+}
