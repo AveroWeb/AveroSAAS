@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agence SaaS
 
-## Getting Started
+Logiciel interne de gestion pour agence web : clients, sites, domaines, hébergements, outils, maintenance, incidents, abonnements et rentabilité — le tout dans une seule interface simple.
 
-First, run the development server:
+## Stack
+
+- [Next.js 16](https://nextjs.org) (App Router, Turbopack) + TypeScript
+- [PostgreSQL](https://www.postgresql.org/) via [Prisma 7](https://www.prisma.io/) (driver adapter `@prisma/adapter-pg`)
+- [Tailwind CSS 4](https://tailwindcss.com/) + [shadcn/ui](https://ui.shadcn.com/) (Base UI)
+- [Auth.js v5](https://authjs.dev/) (Credentials + JWT), multi-tenant par organisation
+- Rôles : `ADMIN`, `MEMBER` (équipe agence) et `CLIENT` (portail client, à venir)
+
+## Mise en route
+
+### 1. Base de données
+
+Ce projet utilise PostgreSQL. En développement, [Neon](https://neon.tech) (gratuit, sans installation) est recommandé :
+
+1. Crée un compte sur [neon.tech](https://neon.tech) et un projet.
+2. Copie la chaîne de connexion (`postgresql://...`).
+
+### 2. Variables d'environnement
+
+Copie `.env.example` vers `.env` et renseigne :
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `DATABASE_URL` — ta chaîne de connexion PostgreSQL.
+- `AUTH_SECRET` — génère-en un avec `openssl rand -base64 32`.
+- `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` / `SEED_ADMIN_NAME` / `SEED_ORG_NAME` — utilisés uniquement par le script de seed pour créer ton premier compte admin.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 3. Installation, migrations et données de démo
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npx prisma migrate dev --name init
+npx prisma db seed
+npm run dev
+```
 
-## Learn More
+Ouvre [http://localhost:3000](http://localhost:3000) et connecte-toi avec l'email/mot de passe définis dans `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`.
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts utiles
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run dev        # serveur de développement
+npm run build       # build de production
+npm run lint         # ESLint
+npx tsc --noEmit     # vérification TypeScript
+npx prisma studio    # explorateur de données
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## État du projet (par phase)
 
-## Deploy on Vercel
+- ✅ **Phase 1 — Fondation** : auth, organisation (multi-tenant), schéma de base de données complet, layout principal, Dashboard, gestion des Clients, fiche Client détaillée.
+- ⏳ **Phase 2 — Gestion opérationnelle** : pages dédiées Sites / Domaines / Hébergements / Outils / Tâches (actuellement consultables uniquement depuis la fiche client).
+- ⏳ **Phase 3 — Maintenance** : maintenances récurrentes automatiques, incidents en gestion autonome, alertes avancées.
+- ⏳ **Phase 4 — Argent** : gestion des forfaits et facturation.
+- ⏳ **Phase 5 — Portail client** : authentification client, tickets, rapports.
+- ⏳ **Phase 6 — Automatisation** : monitoring externe, notifications, IA.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Le schéma de base de données (`prisma/schema.prisma`) couvre déjà l'ensemble de ces phases pour éviter les migrations disruptives plus tard.
