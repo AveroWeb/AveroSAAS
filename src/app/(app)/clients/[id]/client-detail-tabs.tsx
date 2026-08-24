@@ -1,8 +1,11 @@
 "use client";
 
-import { Globe, Link2, Server, Wrench as ToolIcon, CalendarClock, AlertTriangle, ListChecks, StickyNote, History, ExternalLink } from "lucide-react";
+import Link from "next/link";
+import { Plus, Pencil, Globe, Link2, Server, Wrench as ToolIcon, CalendarClock, AlertTriangle, ListChecks, StickyNote, History, ExternalLink } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { DeleteIconButton } from "@/components/delete-icon-button";
 import {
   StatusBadge,
   siteStatusMeta,
@@ -17,6 +20,11 @@ import {
 } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import type { SerializedClientDetail } from "@/lib/serialize-client";
+import { DomainDialog } from "./domain-dialog";
+import { HostingDialog } from "./hosting-dialog";
+import { ToolDialog } from "./tool-dialog";
+import { TaskDialog } from "./task-dialog";
+import { deleteDomainAction, deleteHostingAction, deleteToolAction, deleteTaskAction } from "./actions";
 
 type Financials = { hostingCost: number; domainCost: number; toolCost: number; totalCost: number };
 
@@ -27,6 +35,8 @@ export function ClientDetailTabs({
   client: SerializedClientDetail;
   financials: Financials;
 }) {
+  const sites = client.sites.map((s) => ({ id: s.id, name: s.name }));
+
   return (
     <Tabs defaultValue="sites" className="gap-4">
       <TabsList className="w-full justify-start overflow-x-auto">
@@ -42,6 +52,11 @@ export function ClientDetailTabs({
       </TabsList>
 
       <TabsContent value="sites">
+        <div className="mb-3 flex justify-end">
+          <Button size="sm" render={<Link href={`/sites/new?clientId=${client.id}`} />} nativeButton={false}>
+            <Plus /> Nouveau site
+          </Button>
+        </div>
         <EmptyableTable empty={client.sites.length === 0} message="Aucun site pour ce client.">
           <TableHeader>
             <TableRow>
@@ -50,6 +65,7 @@ export function ClientDetailTabs({
               <TableHead>Environnement</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead>Mise en ligne</TableHead>
+              <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -65,6 +81,16 @@ export function ClientDetailTabs({
                 <TableCell><StatusBadge meta={siteEnvironmentMeta[site.environment]} /></TableCell>
                 <TableCell><StatusBadge meta={siteStatusMeta[site.status]} /></TableCell>
                 <TableCell>{formatDate(site.launchedAt)}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    render={<Link href={`/sites/${site.id}/edit`} />}
+                    nativeButton={false}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -72,6 +98,17 @@ export function ClientDetailTabs({
       </TabsContent>
 
       <TabsContent value="domains">
+        <div className="mb-3 flex justify-end">
+          <DomainDialog
+            clientId={client.id}
+            sites={sites}
+            trigger={
+              <Button size="sm">
+                <Plus /> Ajouter un domaine
+              </Button>
+            }
+          />
+        </div>
         <EmptyableTable empty={client.domains.length === 0} message="Aucun domaine pour ce client.">
           <TableHeader>
             <TableRow>
@@ -81,6 +118,7 @@ export function ClientDetailTabs({
               <TableHead>Renouv. auto</TableHead>
               <TableHead>Coût annuel</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -103,6 +141,24 @@ export function ClientDetailTabs({
                 <TableCell>{domain.autoRenew ? "Oui" : "Non"}</TableCell>
                 <TableCell>{domain.annualCost ? formatCurrency(domain.annualCost) : "—"}</TableCell>
                 <TableCell><StatusBadge meta={domainStatusMeta[domain.status]} /></TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <DomainDialog
+                      clientId={client.id}
+                      sites={sites}
+                      domain={domain}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteDomainAction.bind(null, client.id, domain.id)}
+                      confirmMessage={`Supprimer le domaine "${domain.name}" ?`}
+                    />
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -110,6 +166,17 @@ export function ClientDetailTabs({
       </TabsContent>
 
       <TabsContent value="hosting">
+        <div className="mb-3 flex justify-end">
+          <HostingDialog
+            clientId={client.id}
+            sites={sites}
+            trigger={
+              <Button size="sm">
+                <Plus /> Ajouter un hébergement
+              </Button>
+            }
+          />
+        </div>
         <EmptyableTable empty={client.hostings.length === 0} message="Aucun hébergement pour ce client.">
           <TableHeader>
             <TableRow>
@@ -118,6 +185,7 @@ export function ClientDetailTabs({
               <TableHead>Type</TableHead>
               <TableHead>Coût mensuel</TableHead>
               <TableHead>Renouvellement</TableHead>
+              <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -136,6 +204,24 @@ export function ClientDetailTabs({
                 <TableCell>{hosting.serverType ?? "—"}</TableCell>
                 <TableCell>{hosting.monthlyCost ? formatCurrency(hosting.monthlyCost) : "—"}</TableCell>
                 <TableCell>{formatDate(hosting.renewsAt)}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <HostingDialog
+                      clientId={client.id}
+                      sites={sites}
+                      hosting={hosting}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteHostingAction.bind(null, client.id, hosting.id)}
+                      confirmMessage={`Supprimer l'hébergement "${hosting.provider}" ?`}
+                    />
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -143,6 +229,17 @@ export function ClientDetailTabs({
       </TabsContent>
 
       <TabsContent value="tools">
+        <div className="mb-3 flex justify-end">
+          <ToolDialog
+            clientId={client.id}
+            sites={sites}
+            trigger={
+              <Button size="sm">
+                <Plus /> Ajouter un outil
+              </Button>
+            }
+          />
+        </div>
         <EmptyableTable empty={client.tools.length === 0} message="Aucun outil pour ce client.">
           <TableHeader>
             <TableRow>
@@ -150,6 +247,7 @@ export function ClientDetailTabs({
               <TableHead>Catégorie</TableHead>
               <TableHead>Site</TableHead>
               <TableHead>Identifiant</TableHead>
+              <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -167,6 +265,24 @@ export function ClientDetailTabs({
                 <TableCell>{tool.category}</TableCell>
                 <TableCell>{tool.site?.name ?? "—"}</TableCell>
                 <TableCell>{tool.identifier ?? "—"}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <ToolDialog
+                      clientId={client.id}
+                      sites={sites}
+                      tool={tool}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteToolAction.bind(null, client.id, tool.id)}
+                      confirmMessage={`Supprimer l'outil "${tool.name}" ?`}
+                    />
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -252,6 +368,17 @@ export function ClientDetailTabs({
       </TabsContent>
 
       <TabsContent value="tasks">
+        <div className="mb-3 flex justify-end">
+          <TaskDialog
+            clientId={client.id}
+            sites={sites}
+            trigger={
+              <Button size="sm">
+                <Plus /> Nouvelle tâche
+              </Button>
+            }
+          />
+        </div>
         <EmptyableTable empty={client.tasks.length === 0} message="Aucune tâche pour ce client.">
           <TableHeader>
             <TableRow>
@@ -259,7 +386,7 @@ export function ClientDetailTabs({
               <TableHead>Priorité</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead>Échéance</TableHead>
-              <TableHead>Responsable</TableHead>
+              <TableHead className="w-20" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -269,7 +396,24 @@ export function ClientDetailTabs({
                 <TableCell><StatusBadge meta={taskPriorityMeta[task.priority]} /></TableCell>
                 <TableCell><StatusBadge meta={taskStatusMeta[task.status]} /></TableCell>
                 <TableCell>{formatDate(task.dueDate)}</TableCell>
-                <TableCell>{task.assignee?.name ?? "—"}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <TaskDialog
+                      clientId={client.id}
+                      sites={sites}
+                      task={task}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteTaskAction.bind(null, client.id, task.id)}
+                      confirmMessage={`Supprimer la tâche "${task.title}" ?`}
+                    />
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
