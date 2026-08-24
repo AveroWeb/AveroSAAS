@@ -18,6 +18,12 @@ type ClientFormAction = (
   formData: FormData,
 ) => Promise<string | undefined>;
 
+const STATUS_ITEMS = [
+  { value: "ACTIVE", label: "Actif" },
+  { value: "PROSPECT", label: "Prospect" },
+  { value: "INACTIVE", label: "Inactif" },
+];
+
 export function ClientForm({
   action,
   submitLabel,
@@ -55,14 +61,16 @@ export function ClientForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="status">Statut</Label>
-          <Select name="status" defaultValue={defaultValues?.status ?? "PROSPECT"}>
+          <Select name="status" items={STATUS_ITEMS} defaultValue={defaultValues?.status ?? "PROSPECT"}>
             <SelectTrigger id="status" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ACTIVE">Actif</SelectItem>
-              <SelectItem value="PROSPECT">Prospect</SelectItem>
-              <SelectItem value="INACTIVE">Inactif</SelectItem>
+              {STATUS_ITEMS.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

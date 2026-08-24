@@ -7,6 +7,7 @@ import { requireStaff } from "@/lib/session";
 import { getClientDetail } from "@/lib/queries/clients";
 import { StatusBadge, clientStatusMeta } from "@/components/status-badge";
 import { computeClientFinancials, computeClientTimeline } from "@/lib/client-overview";
+import { serializeClientDetail } from "@/lib/serialize-client";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ClientDetailTabs } from "./client-detail-tabs";
 
@@ -52,7 +53,7 @@ export default async function ClientDetailPage({
             </p>
           )}
         </div>
-        <Button variant="outline" render={<Link href={`/clients/${client.id}/edit`} />}>
+        <Button variant="outline" render={<Link href={`/clients/${client.id}/edit`} />} nativeButton={false}>
           <Pencil />
           Modifier
         </Button>
@@ -77,7 +78,7 @@ export default async function ClientDetailPage({
         />
       </div>
 
-      <ClientDetailTabs client={client} financials={financials} />
+      <ClientDetailTabs client={serializeClientDetail(client)} financials={financials} />
     </div>
   );
 }

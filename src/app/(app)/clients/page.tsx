@@ -39,7 +39,7 @@ export default async function ClientsPage({
             {clients.length} client{clients.length > 1 ? "s" : ""}
           </p>
         </div>
-        <Button render={<Link href="/clients/new" />}>
+        <Button render={<Link href="/clients/new" />} nativeButton={false}>
           <Plus />
           Nouveau client
         </Button>

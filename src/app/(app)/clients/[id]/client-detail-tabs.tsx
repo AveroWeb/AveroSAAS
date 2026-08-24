@@ -16,7 +16,7 @@ import {
   taskPriorityMeta,
 } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
-import type { ClientDetail } from "@/lib/queries/clients";
+import type { SerializedClientDetail } from "@/lib/serialize-client";
 
 type Financials = { hostingCost: number; domainCost: number; toolCost: number; totalCost: number };
 
@@ -24,7 +24,7 @@ export function ClientDetailTabs({
   client,
   financials,
 }: {
-  client: ClientDetail;
+  client: SerializedClientDetail;
   financials: Financials;
 }) {
   return (
@@ -324,8 +324,8 @@ function EmptyableTable({
     return <p className="py-10 text-center text-sm text-muted-foreground">{message}</p>;
   }
   return (
-    <div className="rounded-lg border">
-      <Table>{children}</Table>
+    <div className="overflow-x-auto rounded-lg border">
+      <Table className="min-w-max">{children}</Table>
     </div>
   );
 }
