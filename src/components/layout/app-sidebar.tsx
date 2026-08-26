@@ -11,6 +11,8 @@ import {
   AlertTriangle,
   Settings,
   Building2,
+  Sparkles,
+  Radar,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,6 +28,8 @@ import {
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/agent", label: "Agent IA", icon: Sparkles },
+  { href: "/prospection", label: "Prospection", icon: Radar },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/sites", label: "Sites", icon: Globe },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },

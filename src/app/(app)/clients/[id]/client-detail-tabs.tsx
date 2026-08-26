@@ -1,11 +1,28 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Pencil, Globe, Link2, Server, Wrench as ToolIcon, CalendarClock, AlertTriangle, ListChecks, StickyNote, History, ExternalLink } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Globe,
+  Link2,
+  Server,
+  Wrench as ToolIcon,
+  CalendarClock,
+  AlertTriangle,
+  ListChecks,
+  StickyNote,
+  History,
+  ExternalLink,
+  CreditCard,
+} from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { DeleteIconButton } from "@/components/delete-icon-button";
+import { MarkDoneButton } from "@/components/mark-done-button";
 import {
   StatusBadge,
   siteStatusMeta,
@@ -17,6 +34,7 @@ import {
   maintenanceStatusMeta,
   taskStatusMeta,
   taskPriorityMeta,
+  subscriptionStatusMeta,
 } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import type { SerializedClientDetail } from "@/lib/serialize-client";
@@ -24,16 +42,33 @@ import { DomainDialog } from "./domain-dialog";
 import { HostingDialog } from "./hosting-dialog";
 import { ToolDialog } from "./tool-dialog";
 import { TaskDialog } from "./task-dialog";
-import { deleteDomainAction, deleteHostingAction, deleteToolAction, deleteTaskAction } from "./actions";
+import { MaintenanceDialog } from "./maintenance-dialog";
+import { IncidentDialog } from "./incident-dialog";
+import { SubscriptionDialog } from "./subscription-dialog";
+import {
+  deleteDomainAction,
+  deleteHostingAction,
+  deleteToolAction,
+  deleteTaskAction,
+  deleteMaintenanceAction,
+  markMaintenanceDoneAction,
+  deleteIncidentAction,
+  resolveIncidentAction,
+  addIncidentEventAction,
+  deleteSubscriptionAction,
+} from "./actions";
 
 type Financials = { hostingCost: number; domainCost: number; toolCost: number; totalCost: number };
+type PlanOption = { id: string; name: string; monthlyPrice: number };
 
 export function ClientDetailTabs({
   client,
   financials,
+  plans,
 }: {
   client: SerializedClientDetail;
   financials: Financials;
+  plans: PlanOption[];
 }) {
   const sites = client.sites.map((s) => ({ id: s.id, name: s.name }));
 
@@ -46,6 +81,7 @@ export function ClientDetailTabs({
         <TabsTrigger value="tools"><ToolIcon className="size-4" /> Outils ({client.tools.length})</TabsTrigger>
         <TabsTrigger value="maintenance"><CalendarClock className="size-4" /> Maintenance ({client.maintenanceTasks.length})</TabsTrigger>
         <TabsTrigger value="incidents"><AlertTriangle className="size-4" /> Incidents ({client.incidents.length})</TabsTrigger>
+        <TabsTrigger value="subscriptions"><CreditCard className="size-4" /> Abonnements ({client.subscriptions.length})</TabsTrigger>
         <TabsTrigger value="tasks"><ListChecks className="size-4" /> Tâches ({client.tasks.length})</TabsTrigger>
         <TabsTrigger value="notes"><StickyNote className="size-4" /> Notes</TabsTrigger>
         <TabsTrigger value="history"><History className="size-4" /> Historique</TabsTrigger>
@@ -290,6 +326,17 @@ export function ClientDetailTabs({
       </TabsContent>
 
       <TabsContent value="maintenance">
+        <div className="mb-3 flex justify-end">
+          <MaintenanceDialog
+            clientId={client.id}
+            sites={sites}
+            trigger={
+              <Button size="sm">
+                <Plus /> Nouvelle maintenance
+              </Button>
+            }
+          />
+        </div>
         <EmptyableTable empty={client.maintenanceTasks.length === 0} message="Aucune maintenance planifiée.">
           <TableHeader>
             <TableRow>
@@ -299,6 +346,7 @@ export function ClientDetailTabs({
               <TableHead>Prochaine exécution</TableHead>
               <TableHead>Dernière exécution</TableHead>
               <TableHead>Statut</TableHead>
+              <TableHead className="w-28" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -310,6 +358,30 @@ export function ClientDetailTabs({
                 <TableCell>{formatDate(task.nextRunAt)}</TableCell>
                 <TableCell>{formatDate(task.lastRunAt)}</TableCell>
                 <TableCell><StatusBadge meta={maintenanceStatusMeta[task.status]} /></TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {task.status === "PENDING" && (
+                      <MarkDoneButton
+                        action={markMaintenanceDoneAction.bind(null, client.id, task.id)}
+                        title="Marquer comme faite"
+                      />
+                    )}
+                    <MaintenanceDialog
+                      clientId={client.id}
+                      sites={sites}
+                      maintenance={task}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteMaintenanceAction.bind(null, client.id, task.id)}
+                      confirmMessage={`Supprimer la maintenance "${task.title}" ?`}
+                    />
+                  </div>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -317,6 +389,17 @@ export function ClientDetailTabs({
       </TabsContent>
 
       <TabsContent value="incidents">
+        <div className="mb-3 flex justify-end">
+          <IncidentDialog
+            clientId={client.id}
+            sites={sites}
+            trigger={
+              <Button size="sm">
+                <Plus /> Nouvel incident
+              </Button>
+            }
+          />
+        </div>
         {client.incidents.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">Aucun incident pour ce client.</p>
         ) : (
@@ -329,9 +412,31 @@ export function ClientDetailTabs({
                     <StatusBadge meta={incidentStatusMeta[incident.status]} />
                     <StatusBadge meta={incidentPriorityMeta[incident.priority]} />
                   </div>
-                  <span className="text-xs text-muted-foreground">
-                    {incident.site?.name ?? "—"} · débuté le {formatDateTime(incident.startedAt)}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">
+                      {incident.site?.name ?? "—"} · débuté le {formatDateTime(incident.startedAt)}
+                    </span>
+                    {(incident.status === "NEW" || incident.status === "IN_PROGRESS") && (
+                      <MarkDoneButton
+                        action={resolveIncidentAction.bind(null, client.id, incident.id)}
+                        title="Marquer comme résolu"
+                      />
+                    )}
+                    <IncidentDialog
+                      clientId={client.id}
+                      sites={sites}
+                      incident={incident}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteIncidentAction.bind(null, client.id, incident.id)}
+                      confirmMessage={`Supprimer l'incident "${incident.title}" ?`}
+                    />
+                  </div>
                 </div>
                 {incident.description && (
                   <p className="mt-2 text-sm text-muted-foreground">{incident.description}</p>
@@ -361,10 +466,66 @@ export function ClientDetailTabs({
                     )}
                   </div>
                 )}
+                <AddIncidentEventForm clientId={client.id} incidentId={incident.id} />
               </div>
             ))}
           </div>
         )}
+      </TabsContent>
+
+      <TabsContent value="subscriptions">
+        <div className="mb-3 flex justify-end">
+          <SubscriptionDialog
+            clientId={client.id}
+            plans={plans}
+            trigger={
+              <Button size="sm">
+                <Plus /> Nouvel abonnement
+              </Button>
+            }
+          />
+        </div>
+        <EmptyableTable empty={client.subscriptions.length === 0} message="Aucun abonnement pour ce client.">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Forfait</TableHead>
+              <TableHead>Prix mensuel</TableHead>
+              <TableHead>Début</TableHead>
+              <TableHead>Renouvellement</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead className="w-20" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {client.subscriptions.map((subscription) => (
+              <TableRow key={subscription.id}>
+                <TableCell className="font-medium">{subscription.plan?.name ?? "Personnalisé"}</TableCell>
+                <TableCell>{formatCurrency(subscription.monthlyPrice)}</TableCell>
+                <TableCell>{formatDate(subscription.startDate)}</TableCell>
+                <TableCell>{formatDate(subscription.renewalDate)}</TableCell>
+                <TableCell><StatusBadge meta={subscriptionStatusMeta[subscription.status]} /></TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    <SubscriptionDialog
+                      clientId={client.id}
+                      plans={plans}
+                      subscription={subscription}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteSubscriptionAction.bind(null, client.id, subscription.id)}
+                      confirmMessage="Supprimer cet abonnement ?"
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </EmptyableTable>
       </TabsContent>
 
       <TabsContent value="tasks">
@@ -484,4 +645,31 @@ function frequencyLabel(frequency: string) {
     YEARLY: "Annuelle",
   };
   return labels[frequency] ?? frequency;
+}
+
+function AddIncidentEventForm({ clientId, incidentId }: { clientId: string; incidentId: string }) {
+  const [message, setMessage] = useState("");
+  const [isPending, startTransition] = useTransition();
+
+  function handleSubmit(formData: FormData) {
+    startTransition(async () => {
+      await addIncidentEventAction(clientId, incidentId, formData);
+      setMessage("");
+    });
+  }
+
+  return (
+    <form action={handleSubmit} className="mt-3 flex items-center gap-2">
+      <Input
+        name="message"
+        placeholder="Ajouter une mise à jour…"
+        value={message}
+        onChange={(e) => setMessage(e.target.value)}
+        className="h-8 text-xs"
+      />
+      <Button type="submit" size="icon-sm" variant="outline" disabled={isPending || !message.trim()}>
+        <Plus className="size-3.5" />
+      </Button>
+    </form>
+  );
 }

@@ -5,6 +5,7 @@ import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requireStaff } from "@/lib/session";
 import { getClientDetail } from "@/lib/queries/clients";
+import { listPlans } from "@/lib/queries/subscriptions";
 import { StatusBadge, clientStatusMeta } from "@/components/status-badge";
 import { computeClientFinancials, computeClientTimeline } from "@/lib/client-overview";
 import { serializeClientDetail } from "@/lib/serialize-client";
@@ -29,7 +30,10 @@ export default async function ClientDetailPage({
 }) {
   const user = await requireStaff();
   const { id } = await params;
-  const client = await getClientDetail(user.organizationId, id);
+  const [client, plans] = await Promise.all([
+    getClientDetail(user.organizationId, id),
+    listPlans(user.organizationId),
+  ]);
   if (!client) notFound();
 
   const financials = computeClientFinancials(client);
@@ -78,7 +82,11 @@ export default async function ClientDetailPage({
         />
       </div>
 
-      <ClientDetailTabs client={serializeClientDetail(client)} financials={financials} />
+      <ClientDetailTabs
+        client={serializeClientDetail(client)}
+        financials={financials}
+        plans={plans.map((p) => ({ id: p.id, name: p.name, monthlyPrice: Number(p.monthlyPrice) }))}
+      />
     </div>
   );
 }

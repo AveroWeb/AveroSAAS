@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
+import { Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { DeleteIconButton } from "@/components/delete-icon-button";
 import { StatusBadge, roleMeta } from "@/components/status-badge";
 import { requireStaff } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
+import { MemberDialog } from "./member-dialog";
+import { deleteMemberAction } from "./actions";
 
 export const metadata: Metadata = { title: "Paramètres — Mon Agence" };
 
@@ -16,6 +21,7 @@ export default async function SettingsPage() {
       orderBy: { createdAt: "asc" },
     }),
   ]);
+  const isAdmin = user.role === "ADMIN";
 
   return (
     <div className="flex max-w-2xl flex-col gap-6">
@@ -46,8 +52,17 @@ export default async function SettingsPage() {
       </Card>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex-row items-center justify-between">
           <CardTitle>Membres de l&apos;équipe</CardTitle>
+          {isAdmin && (
+            <MemberDialog
+              trigger={
+                <Button size="sm">
+                  <Plus /> Ajouter un membre
+                </Button>
+              }
+            />
+          )}
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           {teamMembers.map((member) => (
@@ -56,7 +71,15 @@ export default async function SettingsPage() {
                 <p className="font-medium">{member.name}</p>
                 <p className="text-xs text-muted-foreground">{member.email}</p>
               </div>
-              <StatusBadge meta={roleMeta[member.role]} />
+              <div className="flex items-center gap-1">
+                <StatusBadge meta={roleMeta[member.role]} />
+                {isAdmin && member.id !== user.id && (
+                  <DeleteIconButton
+                    action={deleteMemberAction.bind(null, member.id)}
+                    confirmMessage={`Retirer ${member.name} de l'équipe ?`}
+                  />
+                )}
+              </div>
             </div>
           ))}
         </CardContent>

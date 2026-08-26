@@ -1,12 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { addDays, addWeeks, addMonths, addQuarters, addYears } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/session";
 import { domainSchema } from "@/lib/validation/domain";
 import { hostingSchema } from "@/lib/validation/hosting";
 import { toolSchema } from "@/lib/validation/tool";
 import { taskSchema } from "@/lib/validation/task";
+import { maintenanceSchema } from "@/lib/validation/maintenance";
+import { incidentSchema } from "@/lib/validation/incident";
+import { subscriptionSchema } from "@/lib/validation/subscription";
 
 function toDecimal(value: string) {
   return value ? Number(value) : null;
@@ -162,5 +166,222 @@ export async function toggleTaskDoneAction(clientId: string, taskId: string, don
   await assertClientOwnership(user.organizationId, clientId);
   await prisma.task.update({ where: { id: taskId }, data: { status: done ? "DONE" : "TODO" } });
   revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/dashboard");
+}
+
+// --- Maintenance -----------------------------------------------------------
+
+function nextRunFromFrequency(base: Date, frequency: string) {
+  switch (frequency) {
+    case "DAILY":
+      return addDays(base, 1);
+    case "WEEKLY":
+      return addWeeks(base, 1);
+    case "MONTHLY":
+      return addMonths(base, 1);
+    case "QUARTERLY":
+      return addQuarters(base, 1);
+    case "YEARLY":
+      return addYears(base, 1);
+    default:
+      return base;
+  }
+}
+
+export async function saveMaintenanceAction(maintenanceId: string | null, clientId: string, formData: FormData) {
+  const user = await requireStaff();
+  const data = maintenanceSchema.parse(Object.fromEntries(formData));
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const payload = {
+    clientId,
+    siteId: data.siteId || null,
+    title: data.title,
+    description: data.description || null,
+    frequency: data.frequency,
+    status: data.status,
+    nextRunAt: toDate(data.nextRunAt) ?? new Date(),
+    lastRunAt: toDate(data.lastRunAt ?? ""),
+  };
+
+  if (maintenanceId) {
+    await prisma.maintenanceTask.update({ where: { id: maintenanceId }, data: payload });
+  } else {
+    await prisma.maintenanceTask.create({ data: { organizationId: user.organizationId, ...payload } });
+  }
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/maintenance");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteMaintenanceAction(clientId: string, maintenanceId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+  await prisma.maintenanceTask.delete({ where: { id: maintenanceId } });
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/maintenance");
+  revalidatePath("/dashboard");
+}
+
+export async function markMaintenanceDoneAction(clientId: string, maintenanceId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const task = await prisma.maintenanceTask.findFirst({
+    where: { id: maintenanceId, organizationId: user.organizationId },
+  });
+  if (!task) throw new Error("Maintenance introuvable.");
+
+  const now = new Date();
+  const isRecurring = task.frequency !== "ONCE";
+
+  await prisma.maintenanceTask.update({
+    where: { id: maintenanceId },
+    data: {
+      lastRunAt: now,
+      status: isRecurring ? "PENDING" : "DONE",
+      nextRunAt: isRecurring ? nextRunFromFrequency(now, task.frequency) : task.nextRunAt,
+    },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      organizationId: user.organizationId,
+      clientId,
+      userId: user.id,
+      type: "MAINTENANCE_DONE",
+      message: `Maintenance effectuée : ${task.title}`,
+    },
+  });
+
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/maintenance");
+  revalidatePath("/dashboard");
+}
+
+// --- Incidents ---------------------------------------------------------------
+
+export async function saveIncidentAction(incidentId: string | null, clientId: string, formData: FormData) {
+  const user = await requireStaff();
+  const data = incidentSchema.parse(Object.fromEntries(formData));
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const payload = {
+    clientId,
+    siteId: data.siteId || null,
+    title: data.title,
+    description: data.description || null,
+    cause: data.cause || null,
+    solution: data.solution || null,
+    status: data.status,
+    priority: data.priority,
+    startedAt: toDate(data.startedAt) ?? new Date(),
+    resolvedAt: toDate(data.resolvedAt ?? ""),
+  };
+
+  if (incidentId) {
+    await prisma.incident.update({ where: { id: incidentId }, data: payload });
+  } else {
+    const incident = await prisma.incident.create({ data: { organizationId: user.organizationId, ...payload } });
+    await prisma.activityLog.create({
+      data: {
+        organizationId: user.organizationId,
+        clientId,
+        userId: user.id,
+        type: "INCIDENT_OPENED",
+        message: `Incident ouvert : ${incident.title}`,
+      },
+    });
+  }
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/incidents");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteIncidentAction(clientId: string, incidentId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+  await prisma.incident.delete({ where: { id: incidentId } });
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/incidents");
+  revalidatePath("/dashboard");
+}
+
+export async function resolveIncidentAction(clientId: string, incidentId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const incident = await prisma.incident.update({
+    where: { id: incidentId },
+    data: { status: "RESOLVED", resolvedAt: new Date() },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      organizationId: user.organizationId,
+      clientId,
+      userId: user.id,
+      type: "INCIDENT_RESOLVED",
+      message: `Incident résolu : ${incident.title}`,
+    },
+  });
+
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/incidents");
+  revalidatePath("/dashboard");
+}
+
+export async function addIncidentEventAction(clientId: string, incidentId: string, formData: FormData) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+  const message = String(formData.get("message") ?? "").trim();
+  if (!message) throw new Error("Le message est requis.");
+
+  await prisma.incidentEvent.create({ data: { incidentId, message } });
+  revalidatePath(`/clients/${clientId}`);
+}
+
+// --- Subscriptions -----------------------------------------------------------
+
+export async function saveSubscriptionAction(subscriptionId: string | null, clientId: string, formData: FormData) {
+  const user = await requireStaff();
+  const data = subscriptionSchema.parse(Object.fromEntries(formData));
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const payload = {
+    clientId,
+    planId: data.planId || null,
+    monthlyPrice: toDecimal(data.monthlyPrice) ?? 0,
+    startDate: toDate(data.startDate) ?? new Date(),
+    renewalDate: toDate(data.renewalDate ?? ""),
+    status: data.status,
+    description: data.description || null,
+  };
+
+  if (subscriptionId) {
+    await prisma.subscription.update({ where: { id: subscriptionId }, data: payload });
+  } else {
+    await prisma.subscription.create({ data: { organizationId: user.organizationId, ...payload } });
+    await prisma.activityLog.create({
+      data: {
+        organizationId: user.organizationId,
+        clientId,
+        userId: user.id,
+        type: "SUBSCRIPTION_STARTED",
+        message: "Abonnement démarré.",
+      },
+    });
+  }
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/subscriptions");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteSubscriptionAction(clientId: string, subscriptionId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+  await prisma.subscription.delete({ where: { id: subscriptionId } });
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/subscriptions");
   revalidatePath("/dashboard");
 }
