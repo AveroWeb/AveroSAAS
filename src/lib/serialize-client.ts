@@ -29,6 +29,19 @@ export function serializeClientDetail(client: ClientDetail) {
         ? { ...subscription.plan, monthlyPrice: toNumber(subscription.plan.monthlyPrice) }
         : null,
     })),
+    invoices: client.invoices.map((invoice) => ({
+      ...invoice,
+      amount: toNumber(invoice.amount),
+      subscription: invoice.subscription
+        ? {
+            ...invoice.subscription,
+            monthlyPrice: toNumber(invoice.subscription.monthlyPrice),
+            plan: invoice.subscription.plan
+              ? { ...invoice.subscription.plan, monthlyPrice: toNumber(invoice.subscription.plan.monthlyPrice) }
+              : null,
+          }
+        : null,
+    })),
   };
 }
 

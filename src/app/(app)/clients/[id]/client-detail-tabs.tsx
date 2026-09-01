@@ -16,6 +16,7 @@ import {
   History,
   ExternalLink,
   CreditCard,
+  Receipt,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -35,6 +36,7 @@ import {
   taskStatusMeta,
   taskPriorityMeta,
   subscriptionStatusMeta,
+  invoiceStatusMeta,
 } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import type { SerializedClientDetail } from "@/lib/serialize-client";
@@ -45,6 +47,7 @@ import { TaskDialog } from "./task-dialog";
 import { MaintenanceDialog } from "./maintenance-dialog";
 import { IncidentDialog } from "./incident-dialog";
 import { SubscriptionDialog } from "./subscription-dialog";
+import { InvoiceDialog } from "./invoice-dialog";
 import {
   deleteDomainAction,
   deleteHostingAction,
@@ -56,6 +59,9 @@ import {
   resolveIncidentAction,
   addIncidentEventAction,
   deleteSubscriptionAction,
+  deleteInvoiceAction,
+  markInvoicePaidAction,
+  generateInvoiceFromSubscriptionAction,
 } from "./actions";
 
 type Financials = { hostingCost: number; domainCost: number; toolCost: number; totalCost: number };
@@ -82,6 +88,7 @@ export function ClientDetailTabs({
         <TabsTrigger value="maintenance"><CalendarClock className="size-4" /> Maintenance ({client.maintenanceTasks.length})</TabsTrigger>
         <TabsTrigger value="incidents"><AlertTriangle className="size-4" /> Incidents ({client.incidents.length})</TabsTrigger>
         <TabsTrigger value="subscriptions"><CreditCard className="size-4" /> Abonnements ({client.subscriptions.length})</TabsTrigger>
+        <TabsTrigger value="invoices"><Receipt className="size-4" /> Factures ({client.invoices.length})</TabsTrigger>
         <TabsTrigger value="tasks"><ListChecks className="size-4" /> Tâches ({client.tasks.length})</TabsTrigger>
         <TabsTrigger value="notes"><StickyNote className="size-4" /> Notes</TabsTrigger>
         <TabsTrigger value="history"><History className="size-4" /> Historique</TabsTrigger>
@@ -506,6 +513,11 @@ export function ClientDetailTabs({
                 <TableCell><StatusBadge meta={subscriptionStatusMeta[subscription.status]} /></TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1">
+                    {subscription.status === "ACTIVE" && (
+                      <GenerateInvoiceButton
+                        action={generateInvoiceFromSubscriptionAction.bind(null, client.id, subscription.id)}
+                      />
+                    )}
                     <SubscriptionDialog
                       clientId={client.id}
                       plans={plans}
@@ -519,6 +531,65 @@ export function ClientDetailTabs({
                     <DeleteIconButton
                       action={deleteSubscriptionAction.bind(null, client.id, subscription.id)}
                       confirmMessage="Supprimer cet abonnement ?"
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </EmptyableTable>
+      </TabsContent>
+
+      <TabsContent value="invoices">
+        <div className="mb-3 flex justify-end">
+          <InvoiceDialog
+            clientId={client.id}
+            subscriptions={client.subscriptions.map((s) => ({ id: s.id, label: s.plan?.name ?? "Abonnement personnalisé" }))}
+            trigger={
+              <Button size="sm">
+                <Plus /> Nouvelle facture
+              </Button>
+            }
+          />
+        </div>
+        <EmptyableTable empty={client.invoices.length === 0} message="Aucune facture pour ce client.">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Montant</TableHead>
+              <TableHead>Émission</TableHead>
+              <TableHead>Échéance</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead className="w-28" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {client.invoices.map((invoice) => (
+              <TableRow key={invoice.id}>
+                <TableCell className="font-medium">{formatCurrency(invoice.amount)}</TableCell>
+                <TableCell>{formatDate(invoice.issueDate)}</TableCell>
+                <TableCell>{formatDate(invoice.dueDate)}</TableCell>
+                <TableCell><StatusBadge meta={invoiceStatusMeta[invoice.status]} /></TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {invoice.status === "UNPAID" || invoice.status === "OVERDUE" ? (
+                      <MarkDoneButton
+                        action={markInvoicePaidAction.bind(null, client.id, invoice.id)}
+                        title="Marquer comme payée"
+                      />
+                    ) : null}
+                    <InvoiceDialog
+                      clientId={client.id}
+                      subscriptions={client.subscriptions.map((s) => ({ id: s.id, label: s.plan?.name ?? "Abonnement personnalisé" }))}
+                      invoice={invoice}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteInvoiceAction.bind(null, client.id, invoice.id)}
+                      confirmMessage="Supprimer cette facture ?"
                     />
                   </div>
                 </TableCell>
@@ -671,5 +742,20 @@ function AddIncidentEventForm({ clientId, incidentId }: { clientId: string; inci
         <Plus className="size-3.5" />
       </Button>
     </form>
+  );
+}
+
+function GenerateInvoiceButton({ action }: { action: () => Promise<void> }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      disabled={isPending}
+      title="Générer une facture"
+      onClick={() => startTransition(() => action())}
+    >
+      <Receipt className="size-4" />
+    </Button>
   );
 }

@@ -13,6 +13,7 @@ import {
   Building2,
   Sparkles,
   Radar,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/sites", label: "Sites", icon: Globe },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
   { href: "/subscriptions", label: "Abonnements", icon: CreditCard },
+  { href: "/invoices", label: "Factures", icon: Receipt },
   { href: "/incidents", label: "Incidents", icon: AlertTriangle },
 ];
 

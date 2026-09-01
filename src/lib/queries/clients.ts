@@ -43,6 +43,7 @@ export async function getClientDetail(organizationId: string, clientId: string) 
       hostings: { orderBy: { renewsAt: "asc" }, include: { site: true } },
       tools: { orderBy: { name: "asc" }, include: { site: true } },
       subscriptions: { include: { plan: true }, orderBy: { startDate: "desc" } },
+      invoices: { include: { subscription: { include: { plan: true } } }, orderBy: { issueDate: "desc" } },
       maintenanceTasks: {
         orderBy: { nextRunAt: "asc" },
         include: { site: true, assignee: true },

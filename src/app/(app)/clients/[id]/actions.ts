@@ -11,6 +11,7 @@ import { taskSchema } from "@/lib/validation/task";
 import { maintenanceSchema } from "@/lib/validation/maintenance";
 import { incidentSchema } from "@/lib/validation/incident";
 import { subscriptionSchema } from "@/lib/validation/subscription";
+import { invoiceSchema } from "@/lib/validation/invoice";
 
 function toDecimal(value: string) {
   return value ? Number(value) : null;
@@ -383,5 +384,100 @@ export async function deleteSubscriptionAction(clientId: string, subscriptionId:
   await prisma.subscription.delete({ where: { id: subscriptionId } });
   revalidatePath(`/clients/${clientId}`);
   revalidatePath("/subscriptions");
+  revalidatePath("/dashboard");
+}
+
+// --- Invoices ----------------------------------------------------------------
+
+export async function saveInvoiceAction(invoiceId: string | null, clientId: string, formData: FormData) {
+  const user = await requireStaff();
+  const data = invoiceSchema.parse(Object.fromEntries(formData));
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const payload = {
+    clientId,
+    subscriptionId: data.subscriptionId || null,
+    amount: toDecimal(data.amount) ?? 0,
+    status: data.status,
+    issueDate: toDate(data.issueDate) ?? new Date(),
+    dueDate: toDate(data.dueDate ?? ""),
+    paidAt: data.status === "PAID" ? new Date() : null,
+    notes: data.notes || null,
+  };
+
+  if (invoiceId) {
+    const existing = await prisma.invoice.findFirst({ where: { id: invoiceId, organizationId: user.organizationId } });
+    await prisma.invoice.update({
+      where: { id: invoiceId },
+      data: { ...payload, paidAt: data.status === "PAID" ? (existing?.paidAt ?? new Date()) : null },
+    });
+  } else {
+    await prisma.invoice.create({ data: { organizationId: user.organizationId, ...payload } });
+  }
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+}
+
+export async function deleteInvoiceAction(clientId: string, invoiceId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+  await prisma.invoice.delete({ where: { id: invoiceId } });
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+}
+
+export async function markInvoicePaidAction(clientId: string, invoiceId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const invoice = await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: { status: "PAID", paidAt: new Date() },
+  });
+
+  await prisma.activityLog.create({
+    data: {
+      organizationId: user.organizationId,
+      clientId,
+      userId: user.id,
+      type: "PAYMENT_RECEIVED",
+      message: `Facture de ${invoice.amount.toString()} € payée.`,
+    },
+  });
+
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+}
+
+export async function generateInvoiceFromSubscriptionAction(clientId: string, subscriptionId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const subscription = await prisma.subscription.findFirst({
+    where: { id: subscriptionId, organizationId: user.organizationId },
+  });
+  if (!subscription) throw new Error("Abonnement introuvable.");
+
+  const issueDate = new Date();
+  const dueDate = new Date(issueDate);
+  dueDate.setDate(dueDate.getDate() + 15);
+
+  await prisma.invoice.create({
+    data: {
+      organizationId: user.organizationId,
+      clientId,
+      subscriptionId,
+      amount: subscription.monthlyPrice,
+      status: "UNPAID",
+      issueDate,
+      dueDate,
+    },
+  });
+
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/invoices");
   revalidatePath("/dashboard");
 }

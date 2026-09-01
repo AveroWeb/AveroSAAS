@@ -92,6 +92,13 @@ export const subscriptionStatusMeta: Record<string, BadgeMeta> = {
   CANCELLED: { label: "Résilié", className: zinc },
 };
 
+export const invoiceStatusMeta: Record<string, BadgeMeta> = {
+  PAID: { label: "Payée", className: emerald },
+  UNPAID: { label: "Impayée", className: amber },
+  OVERDUE: { label: "En retard", className: red },
+  CANCELLED: { label: "Annulée", className: zinc },
+};
+
 export const ticketStatusMeta: Record<string, BadgeMeta> = {
   TO_PROCESS: { label: "À traiter", className: red },
   IN_PROGRESS: { label: "En cours", className: amber },
