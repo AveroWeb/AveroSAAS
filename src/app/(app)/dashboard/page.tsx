@@ -9,7 +9,7 @@ import { getDashboardOverview } from "@/lib/queries/dashboard";
 import { formatCurrency, daysUntil } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Dashboard — Mon Agence",
+  title: "Dashboard — Avero Saas",
 };
 
 export default async function DashboardPage() {

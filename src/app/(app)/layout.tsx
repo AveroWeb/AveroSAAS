@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider>
-      <AppSidebar orgName={organization?.name ?? "Mon Agence"} />
+      <AppSidebar orgName={organization?.name ?? "Avero Saas"} />
       <SidebarInset className="min-w-0">
         <Topbar name={user.name ?? user.email ?? ""} email={user.email ?? ""} role={user.role} />
         <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:p-6">{children}</div>

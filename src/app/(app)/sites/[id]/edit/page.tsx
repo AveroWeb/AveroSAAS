@@ -6,7 +6,7 @@ import { getSite, listClientOptions } from "@/lib/queries/sites";
 import { SiteForm } from "../../site-form";
 import { updateSiteAction } from "../../actions";
 
-export const metadata: Metadata = { title: "Modifier le site — Mon Agence" };
+export const metadata: Metadata = { title: "Modifier le site — Avero Saas" };
 
 export default async function EditSitePage({
   params,

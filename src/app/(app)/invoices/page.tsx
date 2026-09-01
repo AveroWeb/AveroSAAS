@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatCurrency, formatDate } from "@/lib/format";
 import { markInvoicePaidAction } from "@/app/(app)/clients/[id]/actions";
 
-export const metadata: Metadata = { title: "Factures — Mon Agence" };
+export const metadata: Metadata = { title: "Factures — Avero Saas" };
 
 export default async function InvoicesPage() {
   const user = await requireStaff();

@@ -7,7 +7,7 @@ import { ClientForm } from "../../client-form";
 import { updateClientAction } from "../../actions";
 
 export const metadata: Metadata = {
-  title: "Modifier le client — Mon Agence",
+  title: "Modifier le client — Avero Saas",
 };
 
 export default async function EditClientPage({

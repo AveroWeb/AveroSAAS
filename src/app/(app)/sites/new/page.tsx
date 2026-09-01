@@ -5,7 +5,7 @@ import { listClientOptions } from "@/lib/queries/sites";
 import { SiteForm } from "../site-form";
 import { createSiteAction } from "../actions";
 
-export const metadata: Metadata = { title: "Nouveau site — Mon Agence" };
+export const metadata: Metadata = { title: "Nouveau site — Avero Saas" };
 
 export default async function NewSitePage({
   searchParams,

@@ -18,7 +18,7 @@ import { listSites } from "@/lib/queries/sites";
 import { formatDate } from "@/lib/format";
 import { SiteRowActions } from "./site-row-actions";
 
-export const metadata: Metadata = { title: "Sites — Mon Agence" };
+export const metadata: Metadata = { title: "Sites — Avero Saas" };
 
 export default async function SitesPage({
   searchParams,

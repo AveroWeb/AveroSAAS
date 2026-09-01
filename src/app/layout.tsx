@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mon Agence — Gestion",
+  title: "Avero Saas — Gestion",
   description: "Gestion des clients, sites, maintenances et incidents.",
 };
 

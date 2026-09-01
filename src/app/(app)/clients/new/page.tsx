@@ -4,7 +4,7 @@ import { ClientForm } from "../client-form";
 import { createClientAction } from "../actions";
 
 export const metadata: Metadata = {
-  title: "Nouveau client — Mon Agence",
+  title: "Nouveau client — Avero Saas",
 };
 
 export default function NewClientPage() {

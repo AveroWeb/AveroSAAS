@@ -20,7 +20,7 @@ export async function generateMetadata({
   const user = await requireStaff();
   const { id } = await params;
   const client = await getClientDetail(user.organizationId, id);
-  return { title: client ? `${client.companyName} — Mon Agence` : "Client — Mon Agence" };
+  return { title: client ? `${client.companyName} — Avero Saas` : "Client — Avero Saas" };
 }
 
 export default async function ClientDetailPage({

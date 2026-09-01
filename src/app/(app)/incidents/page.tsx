@@ -7,7 +7,7 @@ import { MarkDoneButton } from "@/components/mark-done-button";
 import { formatDateTime } from "@/lib/format";
 import { resolveIncidentAction } from "@/app/(app)/clients/[id]/actions";
 
-export const metadata: Metadata = { title: "Incidents — Mon Agence" };
+export const metadata: Metadata = { title: "Incidents — Avero Saas" };
 
 export default async function IncidentsPage() {
   const user = await requireStaff();

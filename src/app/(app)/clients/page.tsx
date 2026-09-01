@@ -18,7 +18,7 @@ import { listClients } from "@/lib/queries/clients";
 import { formatCurrency, toNumber } from "@/lib/format";
 
 export const metadata: Metadata = {
-  title: "Clients — Mon Agence",
+  title: "Clients — Avero Saas",
 };
 
 export default async function ClientsPage({

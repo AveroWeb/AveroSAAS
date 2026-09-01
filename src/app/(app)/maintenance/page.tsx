@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { formatDate } from "@/lib/format";
 import { markMaintenanceDoneAction } from "@/app/(app)/clients/[id]/actions";
 
-export const metadata: Metadata = { title: "Maintenance — Mon Agence" };
+export const metadata: Metadata = { title: "Maintenance — Avero Saas" };
 
 const FREQUENCY_LABELS: Record<string, string> = {
   ONCE: "Unique",

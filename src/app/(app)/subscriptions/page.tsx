@@ -12,7 +12,7 @@ import { formatCurrency, formatDate } from "@/lib/format";
 import { PlanDialog } from "./plan-dialog";
 import { deletePlanAction } from "./actions";
 
-export const metadata: Metadata = { title: "Abonnements — Mon Agence" };
+export const metadata: Metadata = { title: "Abonnements — Avero Saas" };
 
 export default async function SubscriptionsPage() {
   const user = await requireStaff();

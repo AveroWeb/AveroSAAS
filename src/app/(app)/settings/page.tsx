@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format";
 import { MemberDialog } from "./member-dialog";
 import { deleteMemberAction } from "./actions";
 
-export const metadata: Metadata = { title: "Paramètres — Mon Agence" };
+export const metadata: Metadata = { title: "Paramètres — Avero Saas" };
 
 export default async function SettingsPage() {
   const user = await requireStaff();
