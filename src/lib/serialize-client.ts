@@ -32,6 +32,11 @@ export function serializeClientDetail(client: ClientDetail) {
     invoices: client.invoices.map((invoice) => ({
       ...invoice,
       amount: toNumber(invoice.amount),
+      lineItems: invoice.lineItems.map((item) => ({
+        ...item,
+        quantity: toNumber(item.quantity),
+        unitPrice: toNumber(item.unitPrice),
+      })),
       subscription: invoice.subscription
         ? {
             ...invoice.subscription,
@@ -45,6 +50,11 @@ export function serializeClientDetail(client: ClientDetail) {
     quotes: client.quotes.map((quote) => ({
       ...quote,
       amount: toNumber(quote.amount),
+      lineItems: quote.lineItems.map((item) => ({
+        ...item,
+        quantity: toNumber(item.quantity),
+        unitPrice: toNumber(item.unitPrice),
+      })),
       invoice: quote.invoice ? { ...quote.invoice, amount: toNumber(quote.invoice.amount) } : null,
     })),
   };

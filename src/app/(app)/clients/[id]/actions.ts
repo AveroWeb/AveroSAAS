@@ -13,6 +13,22 @@ import { incidentSchema } from "@/lib/validation/incident";
 import { subscriptionSchema } from "@/lib/validation/subscription";
 import { invoiceSchema } from "@/lib/validation/invoice";
 import { quoteSchema } from "@/lib/validation/quote";
+import { lineItemsSchema, computeLineItemsTotal, type LineItemValues } from "@/lib/validation/line-items";
+
+function parseLineItems(formData: FormData): LineItemValues[] {
+  const raw = formData.get("lineItems");
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(String(raw ?? "[]"));
+  } catch {
+    throw new Error("Lignes invalides.");
+  }
+  const result = lineItemsSchema.safeParse(parsed);
+  if (!result.success) {
+    throw new Error(result.error.issues[0]?.message ?? "Lignes invalides.");
+  }
+  return result.data;
+}
 
 function toDecimal(value: string) {
   return value ? Number(value) : null;
@@ -393,27 +409,42 @@ export async function deleteSubscriptionAction(clientId: string, subscriptionId:
 export async function saveInvoiceAction(invoiceId: string | null, clientId: string, formData: FormData) {
   const user = await requireStaff();
   const data = invoiceSchema.parse(Object.fromEntries(formData));
+  const lineItems = parseLineItems(formData);
   await assertClientOwnership(user.organizationId, clientId);
 
+  const amount = computeLineItemsTotal(lineItems);
   const payload = {
     clientId,
+    title: data.title || null,
     subscriptionId: data.subscriptionId || null,
-    amount: toDecimal(data.amount) ?? 0,
+    amount,
     status: data.status,
     issueDate: toDate(data.issueDate) ?? new Date(),
     dueDate: toDate(data.dueDate ?? ""),
-    paidAt: data.status === "PAID" ? new Date() : null,
     notes: data.notes || null,
   };
 
   if (invoiceId) {
     const existing = await prisma.invoice.findFirst({ where: { id: invoiceId, organizationId: user.organizationId } });
-    await prisma.invoice.update({
-      where: { id: invoiceId },
-      data: { ...payload, paidAt: data.status === "PAID" ? (existing?.paidAt ?? new Date()) : null },
-    });
+    await prisma.$transaction([
+      prisma.invoice.update({
+        where: { id: invoiceId },
+        data: { ...payload, paidAt: data.status === "PAID" ? (existing?.paidAt ?? new Date()) : null },
+      }),
+      prisma.invoiceLineItem.deleteMany({ where: { invoiceId } }),
+      prisma.invoiceLineItem.createMany({
+        data: lineItems.map((item, index) => ({ invoiceId, position: index, ...item })),
+      }),
+    ]);
   } else {
-    await prisma.invoice.create({ data: { organizationId: user.organizationId, ...payload } });
+    await prisma.invoice.create({
+      data: {
+        organizationId: user.organizationId,
+        ...payload,
+        paidAt: data.status === "PAID" ? new Date() : null,
+        lineItems: { create: lineItems.map((item, index) => ({ position: index, ...item })) },
+      },
+    });
   }
   revalidatePath(`/clients/${clientId}`);
   revalidatePath("/invoices");
@@ -459,22 +490,28 @@ export async function generateInvoiceFromSubscriptionAction(clientId: string, su
 
   const subscription = await prisma.subscription.findFirst({
     where: { id: subscriptionId, organizationId: user.organizationId },
+    include: { plan: true },
   });
   if (!subscription) throw new Error("Abonnement introuvable.");
 
   const issueDate = new Date();
   const dueDate = new Date(issueDate);
   dueDate.setDate(dueDate.getDate() + 15);
+  const label = subscription.plan?.name ?? "Abonnement mensuel";
 
   await prisma.invoice.create({
     data: {
       organizationId: user.organizationId,
       clientId,
       subscriptionId,
+      title: label,
       amount: subscription.monthlyPrice,
       status: "UNPAID",
       issueDate,
       dueDate,
+      lineItems: {
+        create: [{ description: label, quantity: 1, unitPrice: subscription.monthlyPrice, position: 0 }],
+      },
     },
   });
 
@@ -488,13 +525,14 @@ export async function generateInvoiceFromSubscriptionAction(clientId: string, su
 export async function saveQuoteAction(quoteId: string | null, clientId: string, formData: FormData) {
   const user = await requireStaff();
   const data = quoteSchema.parse(Object.fromEntries(formData));
+  const lineItems = parseLineItems(formData);
   await assertClientOwnership(user.organizationId, clientId);
 
+  const amount = computeLineItemsTotal(lineItems);
   const payload = {
     clientId,
     title: data.title,
-    description: data.description || null,
-    amount: toDecimal(data.amount) ?? 0,
+    amount,
     status: data.status,
     issueDate: toDate(data.issueDate) ?? new Date(),
     validUntil: toDate(data.validUntil ?? ""),
@@ -502,9 +540,21 @@ export async function saveQuoteAction(quoteId: string | null, clientId: string, 
   };
 
   if (quoteId) {
-    await prisma.quote.update({ where: { id: quoteId }, data: payload });
+    await prisma.$transaction([
+      prisma.quote.update({ where: { id: quoteId }, data: payload }),
+      prisma.quoteLineItem.deleteMany({ where: { quoteId } }),
+      prisma.quoteLineItem.createMany({
+        data: lineItems.map((item, index) => ({ quoteId, position: index, ...item })),
+      }),
+    ]);
   } else {
-    await prisma.quote.create({ data: { organizationId: user.organizationId, ...payload } });
+    await prisma.quote.create({
+      data: {
+        organizationId: user.organizationId,
+        ...payload,
+        lineItems: { create: lineItems.map((item, index) => ({ position: index, ...item })) },
+      },
+    });
   }
   revalidatePath(`/clients/${clientId}`);
   revalidatePath("/quotes");
@@ -524,7 +574,7 @@ export async function convertQuoteToInvoiceAction(clientId: string, quoteId: str
 
   const quote = await prisma.quote.findFirst({
     where: { id: quoteId, organizationId: user.organizationId },
-    include: { invoice: true },
+    include: { invoice: true, lineItems: { orderBy: { position: "asc" } } },
   });
   if (!quote) throw new Error("Devis introuvable.");
   if (quote.invoice) throw new Error("Ce devis a déjà été converti en facture.");
@@ -539,11 +589,20 @@ export async function convertQuoteToInvoiceAction(clientId: string, quoteId: str
         organizationId: user.organizationId,
         clientId,
         quoteId: quote.id,
+        title: quote.title,
         amount: quote.amount,
         status: "UNPAID",
         issueDate,
         dueDate,
         notes: `Généré depuis le devis "${quote.title}".`,
+        lineItems: {
+          create: quote.lineItems.map((item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            position: item.position,
+          })),
+        },
       },
     }),
     prisma.quote.update({ where: { id: quoteId }, data: { status: "ACCEPTED" } }),

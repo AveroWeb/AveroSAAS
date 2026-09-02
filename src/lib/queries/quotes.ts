@@ -11,6 +11,6 @@ export async function listQuotes(organizationId: string) {
 export async function getQuote(organizationId: string, quoteId: string) {
   return prisma.quote.findFirst({
     where: { id: quoteId, organizationId },
-    include: { client: true, organization: true },
+    include: { client: true, organization: true, lineItems: { orderBy: { position: "asc" } } },
   });
 }

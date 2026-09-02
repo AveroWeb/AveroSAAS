@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LineItemsEditor, type LineItemDraft } from "@/components/line-items-editor";
 import { saveQuoteAction } from "./actions";
 
 const STATUS_ITEMS = [
@@ -32,24 +33,39 @@ function toDateInputValue(date?: Date | string | null) {
 export function QuoteDialog({
   trigger,
   clientId,
+  vatEnabled,
+  vatRate,
   quote,
 }: {
   trigger: ReactNode;
   clientId: string;
+  vatEnabled: boolean;
+  vatRate: number;
   quote?: {
     id: string;
     title: string;
-    description: string | null;
     amount: number;
     status: string;
     issueDate: Date | string;
     validUntil: Date | string | null;
     notes: string | null;
+    lineItems: { description: string; quantity: number; unitPrice: number }[];
   };
 }) {
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | undefined>();
+
+  // Quotes created before line items existed have none — fall back to a single row from the stored total.
+  const initialItems: LineItemDraft[] | undefined = quote
+    ? quote.lineItems.length > 0
+      ? quote.lineItems.map((item) => ({
+          description: item.description,
+          quantity: String(item.quantity),
+          unitPrice: String(item.unitPrice),
+        }))
+      : [{ description: quote.title, quantity: "1", unitPrice: String(quote.amount) }]
+    : undefined;
 
   function handleSubmit(formData: FormData) {
     setError(undefined);
@@ -66,7 +82,7 @@ export function QuoteDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{quote ? "Modifier le devis" : "Nouveau devis"}</DialogTitle>
         </DialogHeader>
@@ -74,19 +90,7 @@ export function QuoteDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="quote-title">Titre *</Label>
-              <Input id="quote-title" name="title" required defaultValue={quote?.title} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="quote-amount">Montant (€) *</Label>
-              <Input
-                id="quote-amount"
-                name="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                defaultValue={quote?.amount}
-              />
+              <Input id="quote-title" name="title" required defaultValue={quote?.title} placeholder="Ex : Refonte du site vitrine" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="quote-status">Statut</Label>
@@ -117,10 +121,9 @@ export function QuoteDialog({
               <Label htmlFor="quote-validUntil">Valable jusqu&apos;au</Label>
               <Input id="quote-validUntil" name="validUntil" type="date" defaultValue={toDateInputValue(quote?.validUntil)} />
             </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="quote-description">Description</Label>
-              <Textarea id="quote-description" name="description" rows={3} defaultValue={quote?.description ?? ""} />
-            </div>
+
+            <LineItemsEditor initialItems={initialItems} vatEnabled={vatEnabled} vatRate={vatRate} />
+
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="quote-notes">Notes</Label>
               <Textarea id="quote-notes" name="notes" rows={2} defaultValue={quote?.notes ?? ""} />

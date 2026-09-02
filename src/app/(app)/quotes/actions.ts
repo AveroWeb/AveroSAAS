@@ -6,10 +6,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireStaff } from "@/lib/session";
 import { quoteSchema } from "@/lib/validation/quote";
+import { lineItemsSchema, computeLineItemsTotal } from "@/lib/validation/line-items";
 
-function toDecimal(value: string) {
-  return value ? Number(value) : null;
-}
 function toDate(value: string) {
   return value ? new Date(value) : null;
 }
@@ -27,17 +25,27 @@ export async function createQuoteAction(_prevState: string | undefined, formData
 
     const data = quoteSchema.parse(Object.fromEntries(formData));
 
+    let lineItemsRaw: unknown;
+    try {
+      lineItemsRaw = JSON.parse(String(formData.get("lineItems") ?? "[]"));
+    } catch {
+      return "Lignes invalides.";
+    }
+    const lineItemsResult = lineItemsSchema.safeParse(lineItemsRaw);
+    if (!lineItemsResult.success) return lineItemsResult.error.issues[0]?.message ?? "Lignes invalides.";
+    const lineItems = lineItemsResult.data;
+
     await prisma.quote.create({
       data: {
         organizationId: user.organizationId,
         clientId,
         title: data.title,
-        description: data.description || null,
-        amount: toDecimal(data.amount) ?? 0,
+        amount: computeLineItemsTotal(lineItems),
         status: data.status,
         issueDate: toDate(data.issueDate) ?? new Date(),
         validUntil: toDate(data.validUntil ?? ""),
         notes: data.notes || null,
+        lineItems: { create: lineItems.map((item, index) => ({ position: index, ...item })) },
       },
     });
   } catch (error) {

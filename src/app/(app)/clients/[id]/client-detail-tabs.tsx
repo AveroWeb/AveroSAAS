@@ -78,10 +78,14 @@ export function ClientDetailTabs({
   client,
   financials,
   plans,
+  vatEnabled,
+  vatRate,
 }: {
   client: SerializedClientDetail;
   financials: Financials;
   plans: PlanOption[];
+  vatEnabled: boolean;
+  vatRate: number;
 }) {
   const sites = client.sites.map((s) => ({ id: s.id, name: s.name }));
 
@@ -552,6 +556,8 @@ export function ClientDetailTabs({
         <div className="mb-3 flex justify-end">
           <QuoteDialog
             clientId={client.id}
+            vatEnabled={vatEnabled}
+            vatRate={vatRate}
             trigger={
               <Button size="sm">
                 <Plus /> Nouveau devis
@@ -594,6 +600,8 @@ export function ClientDetailTabs({
                     </Button>
                     <QuoteDialog
                       clientId={client.id}
+                      vatEnabled={vatEnabled}
+                      vatRate={vatRate}
                       quote={quote}
                       trigger={
                         <Button variant="ghost" size="icon-sm">
@@ -618,6 +626,8 @@ export function ClientDetailTabs({
           <InvoiceDialog
             clientId={client.id}
             subscriptions={client.subscriptions.map((s) => ({ id: s.id, label: s.plan?.name ?? "Abonnement personnalisé" }))}
+            vatEnabled={vatEnabled}
+            vatRate={vatRate}
             trigger={
               <Button size="sm">
                 <Plus /> Nouvelle facture
@@ -662,6 +672,8 @@ export function ClientDetailTabs({
                     <InvoiceDialog
                       clientId={client.id}
                       subscriptions={client.subscriptions.map((s) => ({ id: s.id, label: s.plan?.name ?? "Abonnement personnalisé" }))}
+                      vatEnabled={vatEnabled}
+                      vatRate={vatRate}
                       invoice={invoice}
                       trigger={
                         <Button variant="ghost" size="icon-sm">

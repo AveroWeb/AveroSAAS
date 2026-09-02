@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LineItemsEditor } from "@/components/line-items-editor";
 
 const STATUS_ITEMS = [
   { value: "DRAFT", label: "Brouillon" },
@@ -20,9 +21,13 @@ type QuoteFormAction = (prevState: string | undefined, formData: FormData) => Pr
 export function QuoteForm({
   action,
   clients,
+  vatEnabled,
+  vatRate,
 }: {
   action: QuoteFormAction;
   clients: { id: string; companyName: string }[];
+  vatEnabled: boolean;
+  vatRate: number;
 }) {
   const [error, formAction, isPending] = useActionState(action, undefined);
   const clientItems = clients.map((c) => ({ value: c.id, label: c.companyName }));
@@ -46,14 +51,6 @@ export function QuoteForm({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="amount">Montant (€) *</Label>
-          <Input id="amount" name="amount" type="number" step="0.01" min="0" required />
-        </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="title">Titre *</Label>
-          <Input id="title" name="title" required placeholder="Ex : Refonte du site vitrine" />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="status">Statut</Label>
           <Select name="status" items={STATUS_ITEMS} defaultValue="DRAFT">
             <SelectTrigger id="status" className="w-full">
@@ -68,6 +65,10 @@ export function QuoteForm({
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="title">Titre *</Label>
+          <Input id="title" name="title" required placeholder="Ex : Refonte du site vitrine" />
+        </div>
         <div className="space-y-2">
           <Label htmlFor="issueDate">Date d&apos;émission *</Label>
           <Input id="issueDate" name="issueDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
@@ -76,10 +77,9 @@ export function QuoteForm({
           <Label htmlFor="validUntil">Valable jusqu&apos;au</Label>
           <Input id="validUntil" name="validUntil" type="date" />
         </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea id="description" name="description" rows={3} />
-        </div>
+
+        <LineItemsEditor vatEnabled={vatEnabled} vatRate={vatRate} />
+
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="notes">Notes</Label>
           <Textarea id="notes" name="notes" rows={2} />

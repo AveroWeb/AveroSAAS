@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LineItemsEditor } from "@/components/line-items-editor";
 
 const STATUS_ITEMS = [
   { value: "UNPAID", label: "Impayée" },
@@ -19,9 +20,13 @@ type InvoiceFormAction = (prevState: string | undefined, formData: FormData) => 
 export function InvoiceForm({
   action,
   clients,
+  vatEnabled,
+  vatRate,
 }: {
   action: InvoiceFormAction;
   clients: { id: string; companyName: string }[];
+  vatEnabled: boolean;
+  vatRate: number;
 }) {
   const [error, formAction, isPending] = useActionState(action, undefined);
   const clientItems = clients.map((c) => ({ value: c.id, label: c.companyName }));
@@ -45,10 +50,6 @@ export function InvoiceForm({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="amount">Montant (€) *</Label>
-          <Input id="amount" name="amount" type="number" step="0.01" min="0" required />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="status">Statut</Label>
           <Select name="status" items={STATUS_ITEMS} defaultValue="UNPAID">
             <SelectTrigger id="status" className="w-full">
@@ -63,6 +64,10 @@ export function InvoiceForm({
             </SelectContent>
           </Select>
         </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="title">Objet</Label>
+          <Input id="title" name="title" placeholder="Ex : Rénovation restaurant" />
+        </div>
         <div className="space-y-2">
           <Label htmlFor="issueDate">Date d&apos;émission *</Label>
           <Input id="issueDate" name="issueDate" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} />
@@ -71,6 +76,9 @@ export function InvoiceForm({
           <Label htmlFor="dueDate">Échéance</Label>
           <Input id="dueDate" name="dueDate" type="date" />
         </div>
+
+        <LineItemsEditor vatEnabled={vatEnabled} vatRate={vatRate} />
+
         <div className="space-y-2 sm:col-span-2">
           <Label htmlFor="notes">Notes</Label>
           <Textarea id="notes" name="notes" rows={2} />

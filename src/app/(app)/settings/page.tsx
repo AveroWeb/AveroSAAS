@@ -8,6 +8,7 @@ import { requireStaff } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format";
 import { MemberDialog } from "./member-dialog";
+import { BillingForm } from "./billing-form";
 import { deleteMemberAction } from "./actions";
 
 export const metadata: Metadata = { title: "Paramètres — Avero Saas" };
@@ -50,6 +51,34 @@ export default async function SettingsPage() {
           <Row label="Rôle" value={<StatusBadge meta={roleMeta[user.role]} />} />
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Facturation</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Ces informations apparaissent sur les devis et factures générés (PDF).
+            </p>
+          </CardHeader>
+          <CardContent>
+            <BillingForm
+              billing={{
+                address: organization?.address ?? null,
+                siret: organization?.siret ?? null,
+                vatNumber: organization?.vatNumber ?? null,
+                phone: organization?.phone ?? null,
+                contactEmail: organization?.contactEmail ?? null,
+                bankName: organization?.bankName ?? null,
+                iban: organization?.iban ?? null,
+                bic: organization?.bic ?? null,
+                paymentTerms: organization?.paymentTerms ?? null,
+                vatEnabled: organization?.vatEnabled ?? true,
+                vatRate: organization ? Number(organization.vatRate) : 20,
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex-row items-center justify-between">

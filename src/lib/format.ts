@@ -15,6 +15,15 @@ export function formatCurrency(value: unknown): string {
   }).format(toNumber(value));
 }
 
+export function formatCurrencyPrecise(value: unknown): string {
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(toNumber(value));
+}
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   return new Intl.DateTimeFormat("fr-FR", {

@@ -50,6 +50,12 @@ export async function listInvoices(organizationId: string) {
 export async function getInvoice(organizationId: string, invoiceId: string) {
   return prisma.invoice.findFirst({
     where: { id: invoiceId, organizationId },
-    include: { client: true, organization: true, subscription: { include: { plan: true } }, quote: true },
+    include: {
+      client: true,
+      organization: true,
+      subscription: { include: { plan: true } },
+      quote: true,
+      lineItems: { orderBy: { position: "asc" } },
+    },
   });
 }

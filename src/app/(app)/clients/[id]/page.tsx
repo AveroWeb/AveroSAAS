@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { requireStaff } from "@/lib/session";
 import { getClientDetail } from "@/lib/queries/clients";
 import { listPlans } from "@/lib/queries/subscriptions";
+import { getOrganizationBilling } from "@/lib/queries/organization";
 import { StatusBadge, clientStatusMeta } from "@/components/status-badge";
 import { computeClientFinancials, computeClientTimeline } from "@/lib/client-overview";
 import { serializeClientDetail } from "@/lib/serialize-client";
@@ -30,9 +31,10 @@ export default async function ClientDetailPage({
 }) {
   const user = await requireStaff();
   const { id } = await params;
-  const [client, plans] = await Promise.all([
+  const [client, plans, billing] = await Promise.all([
     getClientDetail(user.organizationId, id),
     listPlans(user.organizationId),
+    getOrganizationBilling(user.organizationId),
   ]);
   if (!client) notFound();
 
@@ -86,6 +88,8 @@ export default async function ClientDetailPage({
         client={serializeClientDetail(client)}
         financials={financials}
         plans={plans.map((p) => ({ id: p.id, name: p.name, monthlyPrice: Number(p.monthlyPrice) }))}
+        vatEnabled={billing?.vatEnabled ?? true}
+        vatRate={billing?.vatRate ?? 20}
       />
     </div>
   );

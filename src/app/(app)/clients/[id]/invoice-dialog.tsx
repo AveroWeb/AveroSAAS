@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { LineItemsEditor, type LineItemDraft } from "@/components/line-items-editor";
 import { saveInvoiceAction } from "./actions";
 
 const STATUS_ITEMS = [
@@ -34,19 +35,25 @@ export function InvoiceDialog({
   trigger,
   clientId,
   subscriptions,
+  vatEnabled,
+  vatRate,
   invoice,
 }: {
   trigger: ReactNode;
   clientId: string;
   subscriptions: { id: string; label: string }[];
+  vatEnabled: boolean;
+  vatRate: number;
   invoice?: {
     id: string;
-    subscriptionId: string | null;
+    title: string | null;
     amount: number;
+    subscriptionId: string | null;
     status: string;
     issueDate: Date | string;
     dueDate: Date | string | null;
     notes: string | null;
+    lineItems: { description: string; quantity: number; unitPrice: number }[];
   };
 }) {
   const [open, setOpen] = useState(false);
@@ -56,6 +63,17 @@ export function InvoiceDialog({
     { value: NO_SUBSCRIPTION_VALUE, label: "Aucun" },
     ...subscriptions.map((s) => ({ value: s.id, label: s.label })),
   ];
+
+  // Invoices created before line items existed have none — fall back to a single row from the stored total.
+  const initialItems: LineItemDraft[] | undefined = invoice
+    ? invoice.lineItems.length > 0
+      ? invoice.lineItems.map((item) => ({
+          description: item.description,
+          quantity: String(item.quantity),
+          unitPrice: String(item.unitPrice),
+        }))
+      : [{ description: invoice.title ?? "Prestation", quantity: "1", unitPrice: String(invoice.amount) }]
+    : undefined;
 
   function handleSubmit(formData: FormData) {
     setError(undefined);
@@ -72,23 +90,15 @@ export function InvoiceDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={trigger as React.ReactElement} />
-      <DialogContent>
+      <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle>{invoice ? "Modifier la facture" : "Nouvelle facture"}</DialogTitle>
         </DialogHeader>
         <form action={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="invoice-amount">Montant (€) *</Label>
-              <Input
-                id="invoice-amount"
-                name="amount"
-                type="number"
-                step="0.01"
-                min="0"
-                required
-                defaultValue={invoice?.amount}
-              />
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="invoice-title">Objet</Label>
+              <Input id="invoice-title" name="title" defaultValue={invoice?.title ?? ""} placeholder="Ex : Rénovation restaurant" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="invoice-status">Statut</Label>
@@ -106,7 +116,7 @@ export function InvoiceDialog({
               </Select>
             </div>
             {subscriptions.length > 0 && (
-              <div className="space-y-2 sm:col-span-2">
+              <div className="space-y-2">
                 <Label htmlFor="invoice-subscription">Abonnement lié</Label>
                 <Select name="subscriptionId" items={subscriptionItems} defaultValue={invoice?.subscriptionId ?? NO_SUBSCRIPTION_VALUE}>
                   <SelectTrigger id="invoice-subscription" className="w-full">
@@ -136,6 +146,9 @@ export function InvoiceDialog({
               <Label htmlFor="invoice-dueDate">Échéance</Label>
               <Input id="invoice-dueDate" name="dueDate" type="date" defaultValue={toDateInputValue(invoice?.dueDate)} />
             </div>
+
+            <LineItemsEditor initialItems={initialItems} vatEnabled={vatEnabled} vatRate={vatRate} />
+
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="invoice-notes">Notes</Label>
               <Textarea id="invoice-notes" name="notes" rows={2} defaultValue={invoice?.notes ?? ""} />

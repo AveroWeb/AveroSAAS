@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 import { memberSchema } from "@/lib/validation/member";
+import { organizationBillingSchema } from "@/lib/validation/organization-billing";
 
 export async function createMemberAction(formData: FormData) {
   const user = await requireAdmin();
@@ -46,4 +47,30 @@ export async function deleteMemberAction(memberId: string) {
 
   await prisma.user.delete({ where: { id: memberId } });
   revalidatePath("/settings");
+}
+
+export async function updateBillingAction(formData: FormData) {
+  const user = await requireAdmin();
+  const data = organizationBillingSchema.parse(Object.fromEntries(formData));
+
+  await prisma.organization.update({
+    where: { id: user.organizationId },
+    data: {
+      address: data.address || null,
+      siret: data.siret || null,
+      vatNumber: data.vatNumber || null,
+      phone: data.phone || null,
+      contactEmail: data.contactEmail || null,
+      bankName: data.bankName || null,
+      iban: data.iban || null,
+      bic: data.bic || null,
+      paymentTerms: data.paymentTerms || null,
+      vatEnabled: data.vatEnabled === "true",
+      vatRate: Number(data.vatRate),
+    },
+  });
+
+  revalidatePath("/settings");
+  revalidatePath("/quotes");
+  revalidatePath("/invoices");
 }
