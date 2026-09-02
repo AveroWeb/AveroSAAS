@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Plus, FileDown } from "lucide-react";
 import { requireStaff } from "@/lib/session";
 import { listInvoices, getInvoiceSummary } from "@/lib/queries/invoices";
 import { StatusBadge, invoiceStatusMeta } from "@/components/status-badge";
 import { MarkDoneButton } from "@/components/mark-done-button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -20,11 +22,17 @@ export default async function InvoicesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Factures</h1>
-        <p className="text-sm text-muted-foreground">
-          {invoices.length} facture{invoices.length > 1 ? "s" : ""}, tous clients confondus.
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Factures</h1>
+          <p className="text-sm text-muted-foreground">
+            {invoices.length} facture{invoices.length > 1 ? "s" : ""}, tous clients confondus.
+          </p>
+        </div>
+        <Button render={<Link href="/invoices/new" />} nativeButton={false}>
+          <Plus />
+          Nouvelle facture
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -44,7 +52,7 @@ export default async function InvoicesPage() {
                 <TableHead>Émission</TableHead>
                 <TableHead>Échéance</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead className="w-10" />
+                <TableHead className="w-20" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -71,12 +79,23 @@ export default async function InvoicesPage() {
                       <StatusBadge meta={invoice.isOverdue ? invoiceStatusMeta.OVERDUE : invoiceStatusMeta[invoice.status]} />
                     </TableCell>
                     <TableCell>
-                      {(invoice.status === "UNPAID" || invoice.status === "OVERDUE") && (
-                        <MarkDoneButton
-                          action={markInvoicePaidAction.bind(null, invoice.client.id, invoice.id)}
-                          title="Marquer comme payée"
-                        />
-                      )}
+                      <div className="flex items-center gap-1">
+                        {(invoice.status === "UNPAID" || invoice.status === "OVERDUE") && (
+                          <MarkDoneButton
+                            action={markInvoicePaidAction.bind(null, invoice.client.id, invoice.id)}
+                            title="Marquer comme payée"
+                          />
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title="Télécharger le PDF"
+                          render={<Link href={`/print/invoices/${invoice.id}`} target="_blank" />}
+                          nativeButton={false}
+                        >
+                          <FileDown className="size-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

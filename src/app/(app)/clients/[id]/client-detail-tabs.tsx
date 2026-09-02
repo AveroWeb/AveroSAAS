@@ -19,6 +19,7 @@ import {
   Receipt,
   FileSignature,
   ArrowRightCircle,
+  FileDown,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -582,6 +583,15 @@ export function ClientDetailTabs({
                     {quote.status === "ACCEPTED" && !quote.invoice && (
                       <ConvertQuoteButton action={convertQuoteToInvoiceAction.bind(null, client.id, quote.id)} />
                     )}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Télécharger le PDF"
+                      render={<Link href={`/print/quotes/${quote.id}`} target="_blank" />}
+                      nativeButton={false}
+                    >
+                      <FileDown className="size-4" />
+                    </Button>
                     <QuoteDialog
                       clientId={client.id}
                       quote={quote}
@@ -640,6 +650,15 @@ export function ClientDetailTabs({
                         title="Marquer comme payée"
                       />
                     ) : null}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Télécharger le PDF"
+                      render={<Link href={`/print/invoices/${invoice.id}`} target="_blank" />}
+                      nativeButton={false}
+                    >
+                      <FileDown className="size-4" />
+                    </Button>
                     <InvoiceDialog
                       clientId={client.id}
                       subscriptions={client.subscriptions.map((s) => ({ id: s.id, label: s.plan?.name ?? "Abonnement personnalisé" }))}

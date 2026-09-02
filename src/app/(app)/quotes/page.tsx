@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Plus, FileDown } from "lucide-react";
 import { requireStaff } from "@/lib/session";
 import { listQuotes } from "@/lib/queries/quotes";
 import { StatusBadge, quoteStatusMeta } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -15,11 +17,17 @@ export default async function QuotesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Devis</h1>
-        <p className="text-sm text-muted-foreground">
-          {quotes.length} devis, tous clients confondus.
-        </p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Devis</h1>
+          <p className="text-sm text-muted-foreground">
+            {quotes.length} devis, tous clients confondus.
+          </p>
+        </div>
+        <Button render={<Link href="/quotes/new" />} nativeButton={false}>
+          <Plus />
+          Nouveau devis
+        </Button>
       </div>
 
       <Card>
@@ -33,12 +41,13 @@ export default async function QuotesPage() {
                 <TableHead>Émission</TableHead>
                 <TableHead>Valable jusqu&apos;au</TableHead>
                 <TableHead>Statut</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {quotes.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">
                     Aucun devis. Crée-en un depuis la fiche d&apos;un client.
                   </TableCell>
                 </TableRow>
@@ -55,6 +64,17 @@ export default async function QuotesPage() {
                     <TableCell>{formatDate(quote.issueDate)}</TableCell>
                     <TableCell>{formatDate(quote.validUntil)}</TableCell>
                     <TableCell><StatusBadge meta={quoteStatusMeta[quote.status]} /></TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        title="Télécharger le PDF"
+                        render={<Link href={`/print/quotes/${quote.id}`} target="_blank" />}
+                        nativeButton={false}
+                      >
+                        <FileDown className="size-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               )}

@@ -7,3 +7,10 @@ export async function listQuotes(organizationId: string) {
     orderBy: { issueDate: "desc" },
   });
 }
+
+export async function getQuote(organizationId: string, quoteId: string) {
+  return prisma.quote.findFirst({
+    where: { id: quoteId, organizationId },
+    include: { client: true, organization: true },
+  });
+}
