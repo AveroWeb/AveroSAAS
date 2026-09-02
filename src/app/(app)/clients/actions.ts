@@ -98,3 +98,21 @@ export async function updateClientAction(
   revalidatePath("/dashboard");
   redirect(`/clients/${clientId}`);
 }
+
+export async function deleteClientAction(clientId: string) {
+  const user = await requireStaff();
+
+  const existing = await prisma.client.findFirst({
+    where: { id: clientId, organizationId: user.organizationId },
+    select: { id: true },
+  });
+  if (!existing) return;
+
+  // Sites, domains, hosting, tools, subscriptions, maintenance, incidents,
+  // tasks, quotes and invoices all cascade-delete with the client (see schema).
+  await prisma.client.delete({ where: { id: clientId } });
+
+  revalidatePath("/clients");
+  revalidatePath("/dashboard");
+  redirect("/clients");
+}

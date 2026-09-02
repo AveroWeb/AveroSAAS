@@ -114,6 +114,27 @@ export async function markEmailReadAction(emailId: string, isRead: boolean) {
   revalidatePath(`/emails/${emailId}`);
 }
 
+export async function deleteEmailsAction(emailIds: string[]) {
+  const user = await requireStaff();
+  if (emailIds.length === 0) return;
+
+  await prisma.email.deleteMany({
+    where: { id: { in: emailIds }, organizationId: user.organizationId },
+  });
+  revalidatePath("/emails");
+}
+
+export async function setEmailsReadAction(emailIds: string[], isRead: boolean) {
+  const user = await requireStaff();
+  if (emailIds.length === 0) return;
+
+  await prisma.email.updateMany({
+    where: { id: { in: emailIds }, organizationId: user.organizationId },
+    data: { isRead },
+  });
+  revalidatePath("/emails");
+}
+
 export async function toggleEmailStarAction(emailId: string, isStarred: boolean) {
   const user = await requireStaff();
   const email = await prisma.email.findFirst({

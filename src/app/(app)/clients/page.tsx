@@ -16,6 +16,7 @@ import { StatusBadge, clientStatusMeta } from "@/components/status-badge";
 import { requireStaff } from "@/lib/session";
 import { listClients } from "@/lib/queries/clients";
 import { formatCurrency, toNumber } from "@/lib/format";
+import { ClientRowActions } from "./client-row-actions";
 
 export const metadata: Metadata = {
   title: "Clients — Avero Saas",
@@ -59,12 +60,13 @@ export default async function ClientsPage({
                 <TableHead>Sites</TableHead>
                 <TableHead>MRR</TableHead>
                 <TableHead>Problèmes</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {clients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                     Aucun client trouvé.
                   </TableCell>
                 </TableRow>
@@ -112,6 +114,9 @@ export default async function ClientsPage({
                             <span className="text-muted-foreground">—</span>
                           )}
                         </Link>
+                      </TableCell>
+                      <TableCell>
+                        <ClientRowActions clientId={client.id} clientName={client.companyName} />
                       </TableCell>
                     </TableRow>
                   );

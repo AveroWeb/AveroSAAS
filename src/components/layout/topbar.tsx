@@ -3,6 +3,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { UserMenu } from "@/components/layout/user-menu";
+import { BackButton } from "@/components/back-button";
 
 export function Topbar({
   name,
@@ -17,6 +18,7 @@ export function Topbar({
     <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
       <SidebarTrigger />
       <Separator orientation="vertical" className="mr-2 h-4" />
+      <BackButton />
       <form action="/clients" className="flex-1 max-w-sm">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

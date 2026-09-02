@@ -1,31 +1,40 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Mail, Plus, Inbox } from "lucide-react";
+import { Mail, Plus } from "lucide-react";
 import { requireStaff } from "@/lib/session";
-import { listEmailAccounts, listEmails } from "@/lib/queries/emails";
+import { listEmailAccounts, listEmails, type EmailFilter, type EmailSort } from "@/lib/queries/emails";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDateTime } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import { AccountDialog } from "./account-dialog";
 import { SyncButton } from "./sync-button";
 import { PushToggle } from "./push-toggle";
+import { EmailList } from "./email-list";
 import { DeleteIconButton } from "@/components/delete-icon-button";
 import { deleteEmailAccountAction } from "./actions";
 
 export const metadata: Metadata = { title: "Emails — Avero Saas" };
 
+const SORTS: EmailSort[] = ["date_desc", "date_asc", "sender", "unread"];
+const FILTERS: EmailFilter[] = ["all", "unread", "starred"];
+
 export default async function EmailsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ account?: string }>;
+  searchParams: Promise<{ account?: string; sort?: string; filter?: string }>;
 }) {
   const user = await requireStaff();
-  const { account: accountFilter } = await searchParams;
+  const { account: accountFilter, sort: sortParam, filter: filterParam } = await searchParams;
+
+  const sort: EmailSort = SORTS.includes(sortParam as EmailSort) ? (sortParam as EmailSort) : "date_desc";
+  const filter: EmailFilter = FILTERS.includes(filterParam as EmailFilter)
+    ? (filterParam as EmailFilter)
+    : "all";
+
   const [accounts, emails] = await Promise.all([
     listEmailAccounts(user.organizationId),
-    listEmails(user.organizationId, { accountId: accountFilter }),
+    listEmails(user.organizationId, { accountId: accountFilter, sort, filter }),
   ]);
 
   return (
@@ -68,7 +77,7 @@ export default async function EmailsPage({
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <FilterLink href="/emails" active={!accountFilter} label="Toutes" />
+            <FilterLink href="/emails" active={!accountFilter} label="Toutes les boîtes" />
             {accounts.map((acc) => (
               <div key={acc.id} className="flex items-center gap-1">
                 <FilterLink href={`/emails?account=${acc.id}`} active={accountFilter === acc.id} label={acc.label} />
@@ -81,47 +90,21 @@ export default async function EmailsPage({
             ))}
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {emails.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 py-16 text-center text-muted-foreground">
-                  <Inbox className="size-8" />
-                  <p>Aucun email pour le moment. Clique sur « Synchroniser » pour vérifier ta boîte.</p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {emails.map((email) => (
-                    <Link
-                      key={email.id}
-                      href={`/emails/${email.id}`}
-                      className={cn(
-                        "flex items-center gap-4 px-4 py-3 hover:bg-muted/50",
-                        !email.isRead && "bg-muted/30",
-                      )}
-                    >
-                      <div className="w-40 shrink-0 truncate text-sm">
-                        <span className={cn(!email.isRead && "font-semibold")}>
-                          {email.fromName || email.fromAddress}
-                        </span>
-                      </div>
-                      <div className="min-w-0 flex-1 truncate text-sm">
-                        <span className={cn(!email.isRead && "font-semibold")}>{email.subject}</span>
-                        {email.bodyText && (
-                          <span className="ml-2 text-muted-foreground">
-                            — {email.bodyText.replace(/\s+/g, " ").slice(0, 80)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="shrink-0 text-xs text-muted-foreground">
-                        {formatDateTime(email.receivedAt)}
-                      </div>
-                      {!email.isRead && <span className="size-2 shrink-0 rounded-full bg-primary" />}
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <EmailList
+            emails={emails.map((email) => ({
+              id: email.id,
+              fromName: email.fromName,
+              fromAddress: email.fromAddress,
+              subject: email.subject,
+              bodyText: email.bodyText,
+              receivedAt: email.receivedAt,
+              isRead: email.isRead,
+              isStarred: email.isStarred,
+            }))}
+            accountId={accountFilter}
+            sort={sort}
+            filter={filter}
+          />
 
           <Card>
             <CardContent className="space-y-2 py-4">

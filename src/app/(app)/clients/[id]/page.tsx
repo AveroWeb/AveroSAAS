@@ -8,10 +8,12 @@ import { getClientDetail } from "@/lib/queries/clients";
 import { listPlans } from "@/lib/queries/subscriptions";
 import { getOrganizationBilling } from "@/lib/queries/organization";
 import { StatusBadge, clientStatusMeta } from "@/components/status-badge";
+import { DeleteButton } from "@/components/delete-button";
 import { computeClientFinancials, computeClientTimeline } from "@/lib/client-overview";
 import { serializeClientDetail } from "@/lib/serialize-client";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { ClientDetailTabs } from "./client-detail-tabs";
+import { deleteClientAction } from "../actions";
 
 export async function generateMetadata({
   params,
@@ -59,10 +61,16 @@ export default async function ClientDetailPage({
             </p>
           )}
         </div>
-        <Button variant="outline" render={<Link href={`/clients/${client.id}/edit`} />} nativeButton={false}>
-          <Pencil />
-          Modifier
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" render={<Link href={`/clients/${client.id}/edit`} />} nativeButton={false}>
+            <Pencil />
+            Modifier
+          </Button>
+          <DeleteButton
+            action={deleteClientAction.bind(null, client.id)}
+            confirmMessage={`Supprimer le client « ${client.companyName} » ? Ses sites, devis, factures, abonnements et incidents seront aussi supprimés. Cette action est irréversible.`}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

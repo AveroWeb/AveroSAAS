@@ -7,18 +7,32 @@ export async function listEmailAccounts(organizationId: string) {
   });
 }
 
+export type EmailSort = "date_desc" | "date_asc" | "sender" | "unread";
+export type EmailFilter = "all" | "unread" | "starred";
+
 export async function listEmails(
   organizationId: string,
-  options?: { accountId?: string; unreadOnly?: boolean },
+  options?: { accountId?: string; filter?: EmailFilter; sort?: EmailSort },
 ) {
+  const filter = options?.filter ?? "all";
+  const sort = options?.sort ?? "date_desc";
+
   return prisma.email.findMany({
     where: {
       organizationId,
       accountId: options?.accountId,
-      isRead: options?.unreadOnly ? false : undefined,
+      isRead: filter === "unread" ? false : undefined,
+      isStarred: filter === "starred" ? true : undefined,
     },
     include: { account: { select: { id: true, label: true, emailAddress: true } } },
-    orderBy: { receivedAt: "desc" },
+    orderBy:
+      sort === "date_asc"
+        ? { receivedAt: "asc" }
+        : sort === "sender"
+          ? [{ fromName: "asc" }, { fromAddress: "asc" }, { receivedAt: "desc" }]
+          : sort === "unread"
+            ? [{ isRead: "asc" }, { receivedAt: "desc" }]
+            : { receivedAt: "desc" },
   });
 }
 
