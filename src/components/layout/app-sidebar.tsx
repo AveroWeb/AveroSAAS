@@ -15,6 +15,7 @@ import {
   Radar,
   Receipt,
   FileSignature,
+  Mail,
 } from "lucide-react";
 import {
   Sidebar,
@@ -26,10 +27,12 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuBadge,
 } from "@/components/ui/sidebar";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/emails", label: "Emails", icon: Mail },
   { href: "/agent", label: "Agent IA", icon: Sparkles },
   { href: "/prospection", label: "Prospection", icon: Radar },
   { href: "/clients", label: "Clients", icon: Users },
@@ -41,7 +44,7 @@ const navItems = [
   { href: "/incidents", label: "Incidents", icon: AlertTriangle },
 ];
 
-export function AppSidebar({ orgName }: { orgName: string }) {
+export function AppSidebar({ orgName, unreadEmailCount = 0 }: { orgName: string; unreadEmailCount?: number }) {
   const pathname = usePathname();
 
   return (
@@ -75,6 +78,9 @@ export function AppSidebar({ orgName }: { orgName: string }) {
                       <item.icon />
                       <span>{item.label}</span>
                     </SidebarMenuButton>
+                    {item.href === "/emails" && unreadEmailCount > 0 && (
+                      <SidebarMenuBadge>{unreadEmailCount}</SidebarMenuBadge>
+                    )}
                   </SidebarMenuItem>
                 );
               })}

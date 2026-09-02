@@ -28,17 +28,17 @@ model Organization {
   updatedAt DateTime @updatedAt
 
   // Billing letterhead — shown on generated quote/invoice PDFs.
-  address       String?  @db.Text
-  siret         String?
-  vatNumber     String?
-  phone         String?
-  contactEmail  String?
-  bankName      String?
-  iban          String?
-  bic           String?
-  paymentTerms  String?  @db.Text
-  vatEnabled    Boolean  @default(true)
-  vatRate       Decimal  @default(20) @db.Decimal(5, 2)
+  address      String? @db.Text
+  siret        String?
+  vatNumber    String?
+  phone        String?
+  contactEmail String?
+  bankName     String?
+  iban         String?
+  bic          String?
+  paymentTerms String? @db.Text
+  vatEnabled   Boolean @default(true)
+  vatRate      Decimal @default(20) @db.Decimal(5, 2)
 
   users            User[]
   clients          Client[]
@@ -56,6 +56,8 @@ model Organization {
   quotes           Quote[]
   activityLogs     ActivityLog[]
   notifications    Notification[]
+  emailAccounts    EmailAccount[]
+  emails           Email[]
 }
 
 model User {
@@ -124,6 +126,7 @@ model Client {
   invoices         Invoice[]
   quotes           Quote[]
   activityLogs     ActivityLog[]
+  emails           Email[]
 
   @@index([organizationId])
 }
@@ -659,6 +662,75 @@ model QuoteLineItem {
   position    Int     @default(0)
 
   @@index([quoteId])
+}
+
+// ---------------------------------------------------------------------------
+// Email — centralized inbox (IMAP sync of a connected mailbox, e.g. Amen.fr)
+// ---------------------------------------------------------------------------
+
+model EmailAccount {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  label        String // display name, e.g. "contact@agence.fr"
+  emailAddress String
+  imapHost     String
+  imapPort     Int     @default(993)
+  imapSecure   Boolean @default(true)
+  username     String
+  // AES-256-GCM encrypted (iv:authTag:ciphertext, base64). Never stored/logged in plain text.
+  passwordEnc  String  @db.Text
+  isActive     Boolean @default(true)
+
+  lastSyncedAt  DateTime?
+  lastSyncError String?   @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  emails Email[]
+
+  @@index([organizationId])
+}
+
+enum EmailFolder {
+  INBOX
+  SENT
+  ARCHIVE
+  TRASH
+}
+
+model Email {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  accountId      String
+  account        EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  clientId       String?
+  client         Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  uid         Int // IMAP UID within the folder — used to dedupe on sync
+  folder      EmailFolder @default(INBOX)
+  messageId   String?
+  fromName    String?
+  fromAddress String
+  toAddresses String      @db.Text
+  subject     String      @db.Text
+  bodyText    String?     @db.Text
+  bodyHtml    String?     @db.Text
+  isRead      Boolean     @default(false)
+  isStarred   Boolean     @default(false)
+  receivedAt  DateTime
+
+  createdAt DateTime @default(now())
+
+  @@unique([accountId, folder, uid])
+  @@index([organizationId])
+  @@index([accountId])
+  @@index([clientId])
+  @@index([receivedAt])
+  @@index([isRead])
 }
 
 // ---------------------------------------------------------------------------
