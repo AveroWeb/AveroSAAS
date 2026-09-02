@@ -10,6 +10,7 @@ import { formatDateTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { AccountDialog } from "./account-dialog";
 import { SyncButton } from "./sync-button";
+import { PushToggle } from "./push-toggle";
 import { DeleteIconButton } from "@/components/delete-icon-button";
 import { deleteEmailAccountAction } from "./actions";
 
@@ -34,9 +35,11 @@ export default async function EmailsPage({
           <h1 className="text-2xl font-semibold tracking-tight">Emails</h1>
           <p className="text-sm text-muted-foreground">
             Boîte de réception centralisée — {emails.length} email{emails.length > 1 ? "s" : ""}.
+            {accounts.length > 0 && " Synchronisation automatique en arrière-plan."}
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {accounts.length > 0 && <PushToggle />}
           {accounts.length > 0 && <SyncButton />}
           <AccountDialog
             trigger={

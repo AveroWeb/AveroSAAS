@@ -7,6 +7,7 @@ import { requireAdmin, requireStaff } from "@/lib/session";
 import { encryptSecret } from "@/lib/crypto";
 import { emailAccountSchema } from "@/lib/validation/email-account";
 import { syncEmailAccount, testImapConnection, EmailSyncError } from "@/lib/email/imap";
+import { notifyNewEmails } from "@/lib/email/notify";
 
 export async function createEmailAccountAction(formData: FormData) {
   const user = await requireAdmin();
@@ -49,7 +50,8 @@ export async function createEmailAccountAction(formData: FormData) {
   });
 
   try {
-    await syncEmailAccount(account.id);
+    const newEmails = await syncEmailAccount(account.id);
+    await notifyNewEmails(user.organizationId, newEmails);
   } catch {
     // Account is saved even if the first sync fails; user can retry from the inbox.
   }
@@ -78,7 +80,8 @@ export async function syncEmailAccountAction(accountId: string) {
   if (!account) throw new Error("Compte introuvable.");
 
   try {
-    await syncEmailAccount(accountId);
+    const newEmails = await syncEmailAccount(accountId);
+    await notifyNewEmails(user.organizationId, newEmails);
   } catch (error) {
     if (error instanceof EmailSyncError) throw new Error(error.message);
     throw error;
@@ -93,7 +96,9 @@ export async function syncAllEmailAccountsAction() {
     where: { organizationId: user.organizationId, isActive: true },
   });
 
-  await Promise.allSettled(accounts.map((account) => syncEmailAccount(account.id)));
+  const results = await Promise.allSettled(accounts.map((account) => syncEmailAccount(account.id)));
+  const newEmails = results.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  await notifyNewEmails(user.organizationId, newEmails);
   revalidatePath("/emails");
 }
 
@@ -135,4 +140,33 @@ export async function linkEmailToClientAction(emailId: string, clientId: string 
 
   await prisma.email.update({ where: { id: emailId }, data: { clientId } });
   revalidatePath(`/emails/${emailId}`);
+}
+
+export async function subscribeToPushAction(subscription: {
+  endpoint: string;
+  keys: { p256dh: string; auth: string };
+}) {
+  const user = await requireStaff();
+
+  await prisma.pushSubscription.upsert({
+    where: { endpoint: subscription.endpoint },
+    create: {
+      organizationId: user.organizationId,
+      userId: user.id,
+      endpoint: subscription.endpoint,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+    },
+    update: {
+      userId: user.id,
+      organizationId: user.organizationId,
+      p256dh: subscription.keys.p256dh,
+      auth: subscription.keys.auth,
+    },
+  });
+}
+
+export async function unsubscribeFromPushAction(endpoint: string) {
+  await requireStaff();
+  await prisma.pushSubscription.deleteMany({ where: { endpoint } });
 }

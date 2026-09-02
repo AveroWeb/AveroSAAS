@@ -40,24 +40,25 @@ model Organization {
   vatEnabled   Boolean @default(true)
   vatRate      Decimal @default(20) @db.Decimal(5, 2)
 
-  users            User[]
-  clients          Client[]
-  sites            Site[]
-  domains          Domain[]
-  hostings         Hosting[]
-  tools            Tool[]
-  plans            Plan[]
-  subscriptions    Subscription[]
-  maintenanceTasks MaintenanceTask[]
-  incidents        Incident[]
-  tasks            Task[]
-  tickets          Ticket[]
-  invoices         Invoice[]
-  quotes           Quote[]
-  activityLogs     ActivityLog[]
-  notifications    Notification[]
-  emailAccounts    EmailAccount[]
-  emails           Email[]
+  users             User[]
+  clients           Client[]
+  sites             Site[]
+  domains           Domain[]
+  hostings          Hosting[]
+  tools             Tool[]
+  plans             Plan[]
+  subscriptions     Subscription[]
+  maintenanceTasks  MaintenanceTask[]
+  incidents         Incident[]
+  tasks             Task[]
+  tickets           Ticket[]
+  invoices          Invoice[]
+  quotes            Quote[]
+  activityLogs      ActivityLog[]
+  notifications     Notification[]
+  emailAccounts     EmailAccount[]
+  emails            Email[]
+  pushSubscriptions PushSubscription[]
 }
 
 model User {
@@ -77,11 +78,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  assignedMaintenanceTasks MaintenanceTask[] @relation("MaintenanceAssignee")
-  assignedTasks            Task[]            @relation("TaskAssignee")
+  assignedMaintenanceTasks MaintenanceTask[]  @relation("MaintenanceAssignee")
+  assignedTasks            Task[]             @relation("TaskAssignee")
   ticketMessages           TicketMessage[]
   activityLogs             ActivityLog[]
   notifications            Notification[]
+  pushSubscriptions        PushSubscription[]
 
   @@index([organizationId])
   @@index([clientId])
@@ -780,6 +782,7 @@ enum NotificationType {
   TASK_LATE
   SUBSCRIPTION_RENEWAL
   TICKET_CREATED
+  NEW_EMAIL
   OTHER
 }
 
@@ -800,4 +803,23 @@ model Notification {
   @@index([organizationId])
   @@index([userId])
   @@index([isRead])
+}
+
+// Browser Web Push subscriptions — one row per (user, device/browser) that has
+// opted in to push notifications (e.g. "new email received").
+model PushSubscription {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint String @unique @db.Text
+  p256dh   String @db.Text
+  auth     String @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([userId])
 }

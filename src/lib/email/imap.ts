@@ -9,8 +9,15 @@ const MAX_MESSAGES_PER_SYNC = 100;
 
 export class EmailSyncError extends Error {}
 
-/** Connects to an IMAP account, pulls the newest messages, and stores new ones. Returns the count of new emails saved. */
-export async function syncEmailAccount(accountId: string) {
+export type SyncedEmailSummary = {
+  id: string;
+  subject: string;
+  fromName: string | null;
+  fromAddress: string;
+};
+
+/** Connects to an IMAP account, pulls the newest messages, and stores new ones. Returns the newly saved emails. */
+export async function syncEmailAccount(accountId: string): Promise<SyncedEmailSummary[]> {
   const account = await prisma.emailAccount.findUnique({ where: { id: accountId } });
   if (!account) throw new EmailSyncError("Compte email introuvable.");
   if (!account.isActive) throw new EmailSyncError("Ce compte email est désactivé.");
@@ -24,7 +31,7 @@ export async function syncEmailAccount(accountId: string) {
     logger: false,
   });
 
-  let savedCount = 0;
+  const savedEmails: SyncedEmailSummary[] = [];
 
   try {
     await client.connect();
@@ -64,7 +71,7 @@ export async function syncEmailAccount(accountId: string) {
           const bodyHtml = typeof parsed.html === "string" ? parsed.html : null;
           const bodyText = parsed.text ?? (bodyHtml ? htmlToText(bodyHtml) : null);
 
-          await prisma.email.create({
+          const created = await prisma.email.create({
             data: {
               organizationId: account.organizationId,
               accountId: account.id,
@@ -80,7 +87,12 @@ export async function syncEmailAccount(accountId: string) {
               receivedAt: parsed.date ?? new Date(),
             },
           });
-          savedCount += 1;
+          savedEmails.push({
+            id: created.id,
+            subject: created.subject,
+            fromName: created.fromName,
+            fromAddress: created.fromAddress,
+          });
         }
       }
     } finally {
@@ -106,7 +118,7 @@ export async function syncEmailAccount(accountId: string) {
     }
   }
 
-  return savedCount;
+  return savedEmails;
 }
 
 /** Verifies IMAP credentials by connecting and immediately logging out. Throws on failure. */
