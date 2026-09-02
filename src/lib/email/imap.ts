@@ -32,55 +32,56 @@ export async function syncEmailAccount(accountId: string) {
     try {
       const status = await client.status(MAILBOX_TO_FOLDER.INBOX, { messages: true });
       const total = status.messages ?? 0;
-      if (total === 0) return 0;
 
-      const startSeq = Math.max(1, total - MAX_MESSAGES_PER_SYNC + 1);
-      const range = `${startSeq}:*`;
+      if (total > 0) {
+        const startSeq = Math.max(1, total - MAX_MESSAGES_PER_SYNC + 1);
+        const range = `${startSeq}:*`;
 
-      const existingUids = new Set(
-        (
-          await prisma.email.findMany({
-            where: { accountId, folder: "INBOX" },
-            select: { uid: true },
-          })
-        ).map((e) => e.uid),
-      );
+        const existingUids = new Set(
+          (
+            await prisma.email.findMany({
+              where: { accountId, folder: "INBOX" },
+              select: { uid: true },
+            })
+          ).map((e) => e.uid),
+        );
 
-      for await (const message of client.fetch(range, {
-        uid: true,
-        envelope: true,
-        source: true,
-      }) as AsyncIterable<FetchMessageObject>) {
-        if (!message.uid || existingUids.has(message.uid)) continue;
-        if (!message.source) continue;
+        for await (const message of client.fetch(range, {
+          uid: true,
+          envelope: true,
+          source: true,
+        }) as AsyncIterable<FetchMessageObject>) {
+          if (!message.uid || existingUids.has(message.uid)) continue;
+          if (!message.source) continue;
 
-        const parsed = await simpleParser(message.source);
-        const from = parsed.from?.value?.[0];
-        const toList = Array.isArray(parsed.to) ? parsed.to : parsed.to ? [parsed.to] : [];
-        const toAddresses = toList
-          .flatMap((t) => t.value.map((v) => v.address).filter(Boolean))
-          .join(", ");
+          const parsed = await simpleParser(message.source);
+          const from = parsed.from?.value?.[0];
+          const toList = Array.isArray(parsed.to) ? parsed.to : parsed.to ? [parsed.to] : [];
+          const toAddresses = toList
+            .flatMap((t) => t.value.map((v) => v.address).filter(Boolean))
+            .join(", ");
 
-        const bodyHtml = typeof parsed.html === "string" ? parsed.html : null;
-        const bodyText = parsed.text ?? (bodyHtml ? htmlToText(bodyHtml) : null);
+          const bodyHtml = typeof parsed.html === "string" ? parsed.html : null;
+          const bodyText = parsed.text ?? (bodyHtml ? htmlToText(bodyHtml) : null);
 
-        await prisma.email.create({
-          data: {
-            organizationId: account.organizationId,
-            accountId: account.id,
-            uid: message.uid,
-            folder: "INBOX",
-            messageId: parsed.messageId ?? null,
-            fromName: from?.name || null,
-            fromAddress: from?.address ?? "inconnu",
-            toAddresses: toAddresses || account.emailAddress,
-            subject: parsed.subject || "(sans objet)",
-            bodyText,
-            bodyHtml,
-            receivedAt: parsed.date ?? new Date(),
-          },
-        });
-        savedCount += 1;
+          await prisma.email.create({
+            data: {
+              organizationId: account.organizationId,
+              accountId: account.id,
+              uid: message.uid,
+              folder: "INBOX",
+              messageId: parsed.messageId ?? null,
+              fromName: from?.name || null,
+              fromAddress: from?.address ?? "inconnu",
+              toAddresses: toAddresses || account.emailAddress,
+              subject: parsed.subject || "(sans objet)",
+              bodyText,
+              bodyHtml,
+              receivedAt: parsed.date ?? new Date(),
+            },
+          });
+          savedCount += 1;
+        }
       }
     } finally {
       lock.release();
