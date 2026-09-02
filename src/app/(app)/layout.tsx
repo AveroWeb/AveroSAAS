@@ -3,6 +3,7 @@ import { requireStaff } from "@/lib/session";
 import { countUnreadEmails } from "@/lib/queries/emails";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { ChatWidget } from "@/components/chat/chat-widget";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <Topbar name={user.name ?? user.email ?? ""} email={user.email ?? ""} role={user.role} />
         <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:p-6">{children}</div>
       </SidebarInset>
+      <ChatWidget />
     </SidebarProvider>
   );
 }
