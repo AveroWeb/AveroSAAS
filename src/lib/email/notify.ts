@@ -19,13 +19,13 @@ export async function notifyNewEmails(organizationId: string, emails: SyncedEmai
   if (emails.length === 1) {
     const email = emails[0];
     await sendPushToOrganization(organizationId, {
-      title: `Nouvel email de ${email.fromName || email.fromAddress}`,
-      body: email.subject,
+      title: `Avero - Mail : ${email.subject}`,
+      body: email.fromName || email.fromAddress,
       url: `/emails/${email.id}`,
     });
   } else {
     await sendPushToOrganization(organizationId, {
-      title: `${emails.length} nouveaux emails`,
+      title: `Avero - Mail : ${emails.length} nouveaux emails`,
       body: emails.map((e) => e.subject).slice(0, 3).join(" • "),
       url: "/emails",
     });
