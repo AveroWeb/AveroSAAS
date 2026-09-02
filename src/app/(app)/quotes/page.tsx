@@ -4,10 +4,12 @@ import { Plus, FileDown } from "lucide-react";
 import { requireStaff } from "@/lib/session";
 import { listQuotes } from "@/lib/queries/quotes";
 import { StatusBadge, quoteStatusMeta } from "@/components/status-badge";
+import { DeleteIconButton } from "@/components/delete-icon-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { deleteQuoteAction } from "@/app/(app)/clients/[id]/actions";
 
 export const metadata: Metadata = { title: "Devis — Avero Saas" };
 
@@ -65,15 +67,21 @@ export default async function QuotesPage() {
                     <TableCell>{formatDate(quote.validUntil)}</TableCell>
                     <TableCell><StatusBadge meta={quoteStatusMeta[quote.status]} /></TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        title="Télécharger le PDF"
-                        render={<Link href={`/print/quotes/${quote.id}`} target="_blank" />}
-                        nativeButton={false}
-                      >
-                        <FileDown className="size-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title="Télécharger le PDF"
+                          render={<Link href={`/print/quotes/${quote.id}`} target="_blank" />}
+                          nativeButton={false}
+                        >
+                          <FileDown className="size-4" />
+                        </Button>
+                        <DeleteIconButton
+                          action={deleteQuoteAction.bind(null, quote.client.id, quote.id)}
+                          confirmMessage="Êtes-vous sûr de vouloir supprimer ce devis ?"
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

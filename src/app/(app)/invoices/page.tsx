@@ -5,11 +5,12 @@ import { requireStaff } from "@/lib/session";
 import { listInvoices, getInvoiceSummary } from "@/lib/queries/invoices";
 import { StatusBadge, invoiceStatusMeta } from "@/components/status-badge";
 import { MarkDoneButton } from "@/components/mark-done-button";
+import { DeleteIconButton } from "@/components/delete-icon-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency, formatDate } from "@/lib/format";
-import { markInvoicePaidAction } from "@/app/(app)/clients/[id]/actions";
+import { markInvoicePaidAction, deleteInvoiceAction } from "@/app/(app)/clients/[id]/actions";
 
 export const metadata: Metadata = { title: "Factures — Avero Saas" };
 
@@ -95,6 +96,10 @@ export default async function InvoicesPage() {
                         >
                           <FileDown className="size-4" />
                         </Button>
+                        <DeleteIconButton
+                          action={deleteInvoiceAction.bind(null, invoice.client.id, invoice.id)}
+                          confirmMessage="Êtes-vous sûr de vouloir supprimer cette facture ?"
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
