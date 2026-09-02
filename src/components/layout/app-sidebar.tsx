@@ -14,6 +14,7 @@ import {
   Sparkles,
   Radar,
   Receipt,
+  FileSignature,
 } from "lucide-react";
 import {
   Sidebar,
@@ -35,6 +36,7 @@ const navItems = [
   { href: "/sites", label: "Sites", icon: Globe },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
   { href: "/subscriptions", label: "Abonnements", icon: CreditCard },
+  { href: "/quotes", label: "Devis", icon: FileSignature },
   { href: "/invoices", label: "Factures", icon: Receipt },
   { href: "/incidents", label: "Incidents", icon: AlertTriangle },
 ];

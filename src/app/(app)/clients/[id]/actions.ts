@@ -12,6 +12,7 @@ import { maintenanceSchema } from "@/lib/validation/maintenance";
 import { incidentSchema } from "@/lib/validation/incident";
 import { subscriptionSchema } from "@/lib/validation/subscription";
 import { invoiceSchema } from "@/lib/validation/invoice";
+import { quoteSchema } from "@/lib/validation/quote";
 
 function toDecimal(value: string) {
   return value ? Number(value) : null;
@@ -478,6 +479,78 @@ export async function generateInvoiceFromSubscriptionAction(clientId: string, su
   });
 
   revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/invoices");
+  revalidatePath("/dashboard");
+}
+
+// --- Quotes (devis) ------------------------------------------------------------
+
+export async function saveQuoteAction(quoteId: string | null, clientId: string, formData: FormData) {
+  const user = await requireStaff();
+  const data = quoteSchema.parse(Object.fromEntries(formData));
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const payload = {
+    clientId,
+    title: data.title,
+    description: data.description || null,
+    amount: toDecimal(data.amount) ?? 0,
+    status: data.status,
+    issueDate: toDate(data.issueDate) ?? new Date(),
+    validUntil: toDate(data.validUntil ?? ""),
+    notes: data.notes || null,
+  };
+
+  if (quoteId) {
+    await prisma.quote.update({ where: { id: quoteId }, data: payload });
+  } else {
+    await prisma.quote.create({ data: { organizationId: user.organizationId, ...payload } });
+  }
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/quotes");
+}
+
+export async function deleteQuoteAction(clientId: string, quoteId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+  await prisma.quote.delete({ where: { id: quoteId } });
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/quotes");
+}
+
+export async function convertQuoteToInvoiceAction(clientId: string, quoteId: string) {
+  const user = await requireStaff();
+  await assertClientOwnership(user.organizationId, clientId);
+
+  const quote = await prisma.quote.findFirst({
+    where: { id: quoteId, organizationId: user.organizationId },
+    include: { invoice: true },
+  });
+  if (!quote) throw new Error("Devis introuvable.");
+  if (quote.invoice) throw new Error("Ce devis a déjà été converti en facture.");
+
+  const issueDate = new Date();
+  const dueDate = new Date(issueDate);
+  dueDate.setDate(dueDate.getDate() + 15);
+
+  await prisma.$transaction([
+    prisma.invoice.create({
+      data: {
+        organizationId: user.organizationId,
+        clientId,
+        quoteId: quote.id,
+        amount: quote.amount,
+        status: "UNPAID",
+        issueDate,
+        dueDate,
+        notes: `Généré depuis le devis "${quote.title}".`,
+      },
+    }),
+    prisma.quote.update({ where: { id: quoteId }, data: { status: "ACCEPTED" } }),
+  ]);
+
+  revalidatePath(`/clients/${clientId}`);
+  revalidatePath("/quotes");
   revalidatePath("/invoices");
   revalidatePath("/dashboard");
 }

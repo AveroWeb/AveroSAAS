@@ -92,6 +92,14 @@ export const subscriptionStatusMeta: Record<string, BadgeMeta> = {
   CANCELLED: { label: "Résilié", className: zinc },
 };
 
+export const quoteStatusMeta: Record<string, BadgeMeta> = {
+  DRAFT: { label: "Brouillon", className: zinc },
+  SENT: { label: "Envoyé", className: blue },
+  ACCEPTED: { label: "Accepté", className: emerald },
+  REJECTED: { label: "Refusé", className: red },
+  EXPIRED: { label: "Expiré", className: amber },
+};
+
 export const invoiceStatusMeta: Record<string, BadgeMeta> = {
   PAID: { label: "Payée", className: emerald },
   UNPAID: { label: "Impayée", className: amber },

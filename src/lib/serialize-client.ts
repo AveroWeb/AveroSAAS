@@ -42,6 +42,11 @@ export function serializeClientDetail(client: ClientDetail) {
           }
         : null,
     })),
+    quotes: client.quotes.map((quote) => ({
+      ...quote,
+      amount: toNumber(quote.amount),
+      invoice: quote.invoice ? { ...quote.invoice, amount: toNumber(quote.invoice.amount) } : null,
+    })),
   };
 }
 

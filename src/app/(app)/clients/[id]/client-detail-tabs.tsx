@@ -17,6 +17,8 @@ import {
   ExternalLink,
   CreditCard,
   Receipt,
+  FileSignature,
+  ArrowRightCircle,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,6 +39,7 @@ import {
   taskPriorityMeta,
   subscriptionStatusMeta,
   invoiceStatusMeta,
+  quoteStatusMeta,
 } from "@/components/status-badge";
 import { formatCurrency, formatDate, formatDateTime } from "@/lib/format";
 import type { SerializedClientDetail } from "@/lib/serialize-client";
@@ -48,6 +51,7 @@ import { MaintenanceDialog } from "./maintenance-dialog";
 import { IncidentDialog } from "./incident-dialog";
 import { SubscriptionDialog } from "./subscription-dialog";
 import { InvoiceDialog } from "./invoice-dialog";
+import { QuoteDialog } from "./quote-dialog";
 import {
   deleteDomainAction,
   deleteHostingAction,
@@ -62,6 +66,8 @@ import {
   deleteInvoiceAction,
   markInvoicePaidAction,
   generateInvoiceFromSubscriptionAction,
+  deleteQuoteAction,
+  convertQuoteToInvoiceAction,
 } from "./actions";
 
 type Financials = { hostingCost: number; domainCost: number; toolCost: number; totalCost: number };
@@ -88,6 +94,7 @@ export function ClientDetailTabs({
         <TabsTrigger value="maintenance"><CalendarClock className="size-4" /> Maintenance ({client.maintenanceTasks.length})</TabsTrigger>
         <TabsTrigger value="incidents"><AlertTriangle className="size-4" /> Incidents ({client.incidents.length})</TabsTrigger>
         <TabsTrigger value="subscriptions"><CreditCard className="size-4" /> Abonnements ({client.subscriptions.length})</TabsTrigger>
+        <TabsTrigger value="quotes"><FileSignature className="size-4" /> Devis ({client.quotes.length})</TabsTrigger>
         <TabsTrigger value="invoices"><Receipt className="size-4" /> Factures ({client.invoices.length})</TabsTrigger>
         <TabsTrigger value="tasks"><ListChecks className="size-4" /> Tâches ({client.tasks.length})</TabsTrigger>
         <TabsTrigger value="notes"><StickyNote className="size-4" /> Notes</TabsTrigger>
@@ -540,6 +547,62 @@ export function ClientDetailTabs({
         </EmptyableTable>
       </TabsContent>
 
+      <TabsContent value="quotes">
+        <div className="mb-3 flex justify-end">
+          <QuoteDialog
+            clientId={client.id}
+            trigger={
+              <Button size="sm">
+                <Plus /> Nouveau devis
+              </Button>
+            }
+          />
+        </div>
+        <EmptyableTable empty={client.quotes.length === 0} message="Aucun devis pour ce client.">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Devis</TableHead>
+              <TableHead>Montant</TableHead>
+              <TableHead>Émission</TableHead>
+              <TableHead>Valable jusqu&apos;au</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead className="w-28" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {client.quotes.map((quote) => (
+              <TableRow key={quote.id}>
+                <TableCell className="font-medium">{quote.title}</TableCell>
+                <TableCell>{formatCurrency(quote.amount)}</TableCell>
+                <TableCell>{formatDate(quote.issueDate)}</TableCell>
+                <TableCell>{formatDate(quote.validUntil)}</TableCell>
+                <TableCell><StatusBadge meta={quoteStatusMeta[quote.status]} /></TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-1">
+                    {quote.status === "ACCEPTED" && !quote.invoice && (
+                      <ConvertQuoteButton action={convertQuoteToInvoiceAction.bind(null, client.id, quote.id)} />
+                    )}
+                    <QuoteDialog
+                      clientId={client.id}
+                      quote={quote}
+                      trigger={
+                        <Button variant="ghost" size="icon-sm">
+                          <Pencil className="size-4" />
+                        </Button>
+                      }
+                    />
+                    <DeleteIconButton
+                      action={deleteQuoteAction.bind(null, client.id, quote.id)}
+                      confirmMessage={`Supprimer le devis "${quote.title}" ?`}
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </EmptyableTable>
+      </TabsContent>
+
       <TabsContent value="invoices">
         <div className="mb-3 flex justify-end">
           <InvoiceDialog
@@ -756,6 +819,21 @@ function GenerateInvoiceButton({ action }: { action: () => Promise<void> }) {
       onClick={() => startTransition(() => action())}
     >
       <Receipt className="size-4" />
+    </Button>
+  );
+}
+
+function ConvertQuoteButton({ action }: { action: () => Promise<void> }) {
+  const [isPending, startTransition] = useTransition();
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      disabled={isPending}
+      title="Convertir en facture"
+      onClick={() => startTransition(() => action())}
+    >
+      <ArrowRightCircle className="size-4" />
     </Button>
   );
 }
