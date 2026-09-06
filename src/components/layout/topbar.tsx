@@ -19,7 +19,7 @@ export function Topbar({
       <SidebarTrigger />
       <Separator orientation="vertical" className="mr-2 h-4" />
       <BackButton />
-      <form action="/clients" className="flex-1 max-w-sm">
+      <form action="/clients" className="flex-1 max-w-sm" data-tour="search">
         <div className="relative">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input

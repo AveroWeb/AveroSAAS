@@ -4,6 +4,7 @@ import { countUnreadEmails } from "@/lib/queries/emails";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { ChatWidget } from "@/components/chat/chat-widget";
+import { ProductTour } from "@/components/tour/product-tour";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="flex min-w-0 flex-1 flex-col gap-4 p-4 md:p-6">{children}</div>
       </SidebarInset>
       <ChatWidget />
+      <ProductTour userId={user.id} />
     </SidebarProvider>
   );
 }

@@ -50,7 +50,7 @@ export function ChatWidget() {
   }
 
   return (
-    <div className="fixed right-4 bottom-4 z-50 print:hidden">
+    <div className="fixed right-4 bottom-4 z-50 print:hidden" data-tour="chat-bubble">
       {open ? (
         <div className="flex h-[560px] max-h-[calc(100dvh-2rem)] w-[380px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-2xl border bg-popover text-popover-foreground shadow-xl">
           <div className="flex items-center justify-between border-b px-4 py-3">

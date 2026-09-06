@@ -17,6 +17,7 @@ import {
   FileSignature,
   Mail,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -30,12 +31,14 @@ import {
   SidebarMenuBadge,
 } from "@/components/ui/sidebar";
 
-const navItems = [
+type NavItem = { href: string; label: string; icon: LucideIcon; tourId?: string };
+
+const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/emails", label: "Emails", icon: Mail },
-  { href: "/agent", label: "Agent IA", icon: Sparkles },
+  { href: "/emails", label: "Emails", icon: Mail, tourId: "nav-emails" },
+  { href: "/agent", label: "Agent IA", icon: Sparkles, tourId: "nav-agent" },
   { href: "/prospection", label: "Prospection", icon: Radar },
-  { href: "/clients", label: "Clients", icon: Users },
+  { href: "/clients", label: "Clients", icon: Users, tourId: "nav-clients" },
   { href: "/sites", label: "Sites", icon: Globe },
   { href: "/maintenance", label: "Maintenance", icon: Wrench },
   { href: "/subscriptions", label: "Abonnements", icon: CreditCard },
@@ -64,12 +67,12 @@ export function AppSidebar({ orgName, unreadEmailCount = 0 }: { orgName: string;
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu data-tour="sidebar-nav">
               {navItems.map((item) => {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.href} data-tour={item.tourId}>
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={isActive}

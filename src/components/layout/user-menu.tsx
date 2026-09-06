@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { LogOut, UserRound } from "lucide-react";
+import { Compass, LogOut, UserRound } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +46,13 @@ export function UserMenu({ name, email, role }: { name: string; email: string; r
             <span className="text-xs font-normal text-muted-foreground">{ROLE_LABELS[role] ?? role}</span>
           </DropdownMenuLabel>
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => window.dispatchEvent(new Event("avero:start-tour"))}
+        >
+          <Compass className="size-4" />
+          Revoir le guide
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
